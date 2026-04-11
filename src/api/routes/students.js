@@ -6,6 +6,29 @@ import { verifyJWT } from '../middleware/auth.js';
 const router = Router();
 router.use(verifyJWT);
 
+// ─── GET /api/v1/students/meta ────────────────────────────────────────────────
+// ดึง distinct faculties, levels, cohorts จาก nbu_students สำหรับ dropdown
+router.get('/meta', async (_req, res) => {
+    try {
+        const [facRes, lvlRes, cohRes] = await Promise.all([
+            query(`SELECT DISTINCT faculty FROM nbu_students WHERE faculty IS NOT NULL AND faculty != '' ORDER BY faculty`),
+            query(`SELECT DISTINCT level   FROM nbu_students WHERE level   IS NOT NULL AND level   != '' ORDER BY level`),
+            query(`SELECT DISTINCT SUBSTRING(student_id,1,2) AS cohort FROM nbu_students WHERE student_id IS NOT NULL ORDER BY cohort DESC`),
+        ]);
+        return res.json({
+            success: true,
+            data: {
+                faculties: facRes.rows.map(r => r.faculty),
+                levels:    lvlRes.rows.map(r => r.level),
+                cohorts:   cohRes.rows.map(r => r.cohort),
+            },
+        });
+    } catch (err) {
+        console.error('Student meta error:', err);
+        return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
 // ─── GET /api/v1/students/search?q=&faculty=&year= ───────────────────────────
 // Fallback ค้นหานักศึกษากรณีสแกน QR ไม่ได้ หรือ manual entry
 router.get('/search', async (req, res) => {

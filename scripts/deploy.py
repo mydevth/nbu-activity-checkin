@@ -1,9 +1,13 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 NBU Activity — Deploy Script
 rsync project files → server, install deps, setup PM2 + Nginx
 """
-import paramiko, os, sys, time, tarfile, io
+import sys, io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+import paramiko, os, time, tarfile
 from pathlib import Path
 from stat import S_ISDIR
 
@@ -19,17 +23,19 @@ LOCAL    = Path(__file__).parent.parent  # root ของ project
 EXCLUDES = {
     "node_modules", ".git", ".env", "*.log", "__pycache__",
     "*.pyc", ".DS_Store", "nbu-activity.zip", "scripts/deploy.py",
-    "public/thumbnails",
+    "public/thumbnails", "*.xlsx", "*.xls", "~$*",
 }
 
 def should_exclude(path: str) -> bool:
+    import fnmatch
     parts = Path(path).parts
     for p in parts:
         if p in EXCLUDES:
             return True
         for exc in EXCLUDES:
-            if exc.startswith("*") and p.endswith(exc[1:]):
-                return True
+            if '*' in exc or '?' in exc:
+                if fnmatch.fnmatch(p, exc):
+                    return True
     return False
 
 # ─── SSH helpers ──────────────────────────────────────────────────────────────

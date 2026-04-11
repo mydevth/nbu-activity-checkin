@@ -563,37 +563,18 @@
               <label style="font-size:12px;color:var(--muted)">คณะ</label>
               <select class="form-control" id="tgt-faculty" style="font-size:13px">
                 <option value="">ทุกคณะ</option>
-                <option value="รัฐศาสตร์">รัฐศาสตร์</option>
-                <option value="บริหารธุรกิจ">บริหารธุรกิจ</option>
-                <option value="เทคโนโลยีสารสนเทศและนวัตกรรมดิจิทัล">เทคโนโลยีสารสนเทศฯ</option>
-                <option value="ศิลปศาสตร์">ศิลปศาสตร์</option>
-                <option value="ศึกษาศาสตร์">ศึกษาศาสตร์</option>
-                <option value="พยาบาลศาสตร์">พยาบาลศาสตร์</option>
-                <option value="วิทยาลัยนานาชาติ">วิทยาลัยนานาชาติ</option>
-                <option value="นิเทศศาสตร์">นิเทศศาสตร์</option>
-                <option value="วิเทศสัมพันธ์">วิเทศสัมพันธ์</option>
               </select>
             </div>
             <div>
               <label style="font-size:12px;color:var(--muted)">ระดับ</label>
               <select class="form-control" id="tgt-level" style="font-size:13px">
                 <option value="">ทุกระดับ</option>
-                <option value="ปริญญาตรี">ปริญญาตรี</option>
-                <option value="บัณฑิตศึกษา">บัณฑิตศึกษา (โท/เอก)</option>
               </select>
             </div>
             <div>
               <label style="font-size:12px;color:var(--muted)">รุ่น (2 หลักท้ายปีที่เข้า)</label>
               <select class="form-control" id="tgt-year" style="font-size:13px">
                 <option value="">ทุกรุ่น</option>
-                <option value="70">รุ่น 70 (เข้า 2570)</option>
-                <option value="69">รุ่น 69 (เข้า 2569)</option>
-                <option value="68">รุ่น 68 (เข้า 2568)</option>
-                <option value="67">รุ่น 67 (เข้า 2567)</option>
-                <option value="66">รุ่น 66 (เข้า 2566)</option>
-                <option value="65">รุ่น 65 (เข้า 2565)</option>
-                <option value="64">รุ่น 64 (เข้า 2564)</option>
-                <option value="63">รุ่น 63 (เข้า 2563)</option>
               </select>
             </div>
             <button class="btn btn-blue btn-sm" onclick="addTarget()" style="white-space:nowrap">+ เพิ่ม</button>
@@ -864,6 +845,25 @@ async function loadDashboard() {
   }
 }
 
+// ─── Student Meta (dropdown options) ──────────────────────────────────────────
+async function loadStudentMeta() {
+  const data = await apiFetch('/students/meta');
+  if (!data.success) return;
+  const { faculties, levels, cohorts } = data.data;
+
+  const selFac = document.getElementById('tgt-faculty');
+  selFac.innerHTML = '<option value="">ทุกคณะ</option>' +
+    faculties.map(f => `<option value="${f}">${f}</option>`).join('');
+
+  const selLvl = document.getElementById('tgt-level');
+  selLvl.innerHTML = '<option value="">ทุกระดับ</option>' +
+    levels.map(l => `<option value="${l}">${l}</option>`).join('');
+
+  const selYr = document.getElementById('tgt-year');
+  selYr.innerHTML = '<option value="">ทุกรุ่น</option>' +
+    cohorts.map(c => `<option value="${c}">รุ่น ${c} (เข้า ${2500 + parseInt(c)})</option>`).join('');
+}
+
 // ─── Activities ───────────────────────────────────────────────────────────────
 async function loadActivities() {
   const data = await apiFetch('/activities');
@@ -1040,8 +1040,8 @@ async function openActivityModal(id = null) {
   document.getElementById('act-id').value = '';
   currentTargets = [];
 
-  // โหลด staff list
-  await loadStaffList();
+  // โหลด staff list + student meta สำหรับ dropdown
+  await Promise.all([loadStaffList(), loadStudentMeta()]);
 
   if (isEdit) {
     const data = await apiFetch(`/activities/${id}`);

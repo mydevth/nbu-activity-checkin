@@ -260,7 +260,6 @@ footer strong { color:rgba(255,255,255,0.35); }
   <!-- Detail view -->
   <div id="detail-view" style="display:none">
     <div id="d-error" style="display:none"></div>
-    <div class="detail-title" id="d-title"></div>
     <div class="detail-meta" id="d-meta"></div>
     <div class="stats-row" id="d-stats"></div>
 
@@ -416,13 +415,13 @@ async function loadDetail(id) {
 }
 
 function renderDetail(data, silent = false) {
-  const { activity, total, target_count = 0, attendance_rate = null, by_faculty, by_major } = data;
+  const { activity, total, target_count = 0, attendance_rate = null,
+          by_faculty, by_major, tgt_by_faculty = [], tgt_by_major = [] } = data;
 
   if (!silent) {
     document.getElementById('d-error').style.display = 'none';
     document.title = `${activity.title} — NBU Activity`;
     document.getElementById('page-title').textContent = activity.title;
-    document.getElementById('d-title').textContent = activity.title;
     document.getElementById('d-meta').innerHTML = [
       `<span class="chip"><i class="fa-regular fa-clock"></i>${fmtDate(activity.start_datetime)}</span>`,
       activity.end_datetime
@@ -473,17 +472,19 @@ function renderDetail(data, silent = false) {
   `;
 
   // Faculty bar chart
-  if (by_faculty.length) {
+  const hasTarget = tgt_by_faculty.length > 0;
+  const allFacSet = new Set([...by_faculty.map(f=>f.label), ...tgt_by_faculty.map(f=>f.label)]);
+  if (allFacSet.size) {
     document.getElementById('d-chart-panel').style.display = 'block';
-    renderFacultyChart(by_faculty);
+    renderFacultyChart(by_faculty, tgt_by_faculty);
   } else {
     document.getElementById('d-chart-panel').style.display = 'none';
   }
 
   // Faculty + Major accordion
-  if (by_faculty.length) {
+  if (allFacSet.size) {
     document.getElementById('d-major-panel').style.display = 'block';
-    renderMajorAccordion(by_faculty, by_major || []);
+    renderMajorAccordion(by_faculty, by_major || [], tgt_by_faculty, tgt_by_major || []);
   } else {
     document.getElementById('d-major-panel').style.display = 'none';
   }
@@ -497,26 +498,69 @@ function renderDetail(data, silent = false) {
 const COLORS = ['#0077ff','#00c6ff','#22c55e','#f59e0b','#a855f7',
                 '#ef4444','#06b6d4','#84cc16','#f97316','#ec4899'];
 
-function renderFacultyChart(byFac) {
+const FACULTY_ABBR = {
+  'เทคโนโลยีสารสนเทศและนวัตกรรมดิจิทัล': 'ITDI',
+  'นิเทศศาสตร์':    'CA',
+  'บริหารธุรกิจ':   'BA',
+  'พยาบาลศาสตร์':   'NS',
+  'รัฐศาสตร์':      'PS',
+  'วิทยาลัยนานาชาติ': 'IC',
+  'ศิลปศาสตร์':     'LA',
+  'ศึกษาศาสตร์':    'ED',
+};
+const facAbbr = name => FACULTY_ABBR[name] || name;
+
+function renderFacultyChart(byFac, byTgt = []) {
   if (facChart) { facChart.destroy(); facChart = null; }
+
+  // รวม faculty จาก attended + target, เรียงตามชื่อ
+  const tgtMap = Object.fromEntries(byTgt.map(f => [f.label||'', parseInt(f.total)]));
+  const attMap = Object.fromEntries(byFac.map(f => [f.label||'', parseInt(f.count)]));
+  const allFac = [...new Set([...byFac.map(f=>f.label||''), ...byTgt.map(f=>f.label||'')])].sort((a,b)=>a.localeCompare(b,'th'));
+  const hasTarget = byTgt.length > 0;
+
+  const datasets = hasTarget ? [
+    {
+      label: 'เป้าหมาย',
+      data: allFac.map(f => tgtMap[f] || 0),
+      backgroundColor: 'rgba(148,163,184,0.25)',
+      borderColor: 'rgba(148,163,184,0.5)',
+      borderWidth:1, borderRadius:6,
+    },
+    {
+      label: 'เข้าร่วม',
+      data: allFac.map(f => attMap[f] || 0),
+      backgroundColor: allFac.map((_,i) => COLORS[i%COLORS.length]+'bb'),
+      borderColor:     allFac.map((_,i) => COLORS[i%COLORS.length]),
+      borderWidth:1, borderRadius:6,
+    },
+  ] : [{
+    label: 'เข้าร่วม',
+    data: allFac.map(f => attMap[f] || 0),
+    backgroundColor: allFac.map((_,i) => COLORS[i%COLORS.length]+'bb'),
+    borderColor:     allFac.map((_,i) => COLORS[i%COLORS.length]),
+    borderWidth:1, borderRadius:6,
+  }];
+
   const ctx = document.getElementById('fac-chart').getContext('2d');
   facChart = new Chart(ctx, {
     type: 'bar',
-    data: {
-      labels: byFac.map(f => f.label || '—'),
-      datasets: [{
-        label: 'จำนวนนักศึกษา',
-        data: byFac.map(f => +f.count),
-        backgroundColor: byFac.map((_,i) => COLORS[i%COLORS.length]+'bb'),
-        borderColor:     byFac.map((_,i) => COLORS[i%COLORS.length]),
-        borderWidth:1, borderRadius:6,
-      }],
-    },
+    data: { labels: allFac.map(f => facAbbr(f) || '—'), datasets },
     options: {
       responsive:true, maintainAspectRatio:false,
       plugins:{
-        legend:{display:false},
-        tooltip:{ callbacks:{ label: c => ` ${c.raw.toLocaleString()} คน` } },
+        legend:{ display: hasTarget, labels:{ color:'#94a3b8', font:{family:'Prompt',size:11} } },
+        tooltip:{ callbacks:{
+          title: items => allFac[items[0].dataIndex] || '—',
+          label: c => {
+            if (!hasTarget) return ` ${c.raw.toLocaleString()} คน`;
+            const fac = allFac[c.dataIndex];
+            if (c.dataset.label === 'เป้าหมาย') return ` เป้าหมาย ${(tgtMap[fac]||0).toLocaleString()} คน`;
+            const t = tgtMap[fac] || 0;
+            const p = t > 0 ? Math.round((attMap[fac]||0) / t * 100) : null;
+            return ` เข้าร่วม ${(attMap[fac]||0).toLocaleString()} คน${p !== null ? ` (${p}%)` : ''}`;
+          },
+        }},
       },
       scales:{
         x:{ ticks:{color:'#94a3b8',font:{family:'Prompt',size:11}},
@@ -529,65 +573,101 @@ function renderFacultyChart(byFac) {
 }
 
 // ─── Faculty + Major accordion ────────────────────────────────────────────────
-function renderMajorAccordion(byFaculty, byMajor) {
-  const maxFac = Math.max(...byFaculty.map(f => +f.count), 1);
+function renderMajorAccordion(byFaculty, byMajor, byTgtFac = [], byTgtMaj = []) {
   const container = document.getElementById('d-major-list');
+  const hasTarget = byTgtFac.length > 0;
 
-  // Group major rows by faculty
+  // maps
+  const tgtFacMap = Object.fromEntries(byTgtFac.map(f => [f.label||'', parseInt(f.total)]));
+  const tgtMajMap = Object.fromEntries(byTgtMaj.map(m => [`${m.faculty}||${m.label}`, parseInt(m.total)]));
+  const attMajMap = {};
+  byMajor.forEach(m => { attMajMap[`${m.faculty}||${m.label}`] = parseInt(m.count); });
+
+  // รวม faculty จากทั้ง attended + target
+  const allFacMap = {};
+  byFaculty.forEach(f => { allFacMap[f.label||''] = parseInt(f.count); });
+  byTgtFac.forEach(f => { if (!(f.label in allFacMap)) allFacMap[f.label||''] = 0; });
+  const allFaculties = Object.keys(allFacMap).sort((a,b) => a.localeCompare(b,'th'));
+
+  // รวม major per faculty
   const majorMap = {};
   byMajor.forEach(m => {
-    if (!majorMap[m.faculty]) majorMap[m.faculty] = [];
-    majorMap[m.faculty].push(m);
+    if (!majorMap[m.faculty]) majorMap[m.faculty] = new Set();
+    majorMap[m.faculty].add(m.label||'');
+  });
+  byTgtMaj.forEach(m => {
+    if (!majorMap[m.faculty]) majorMap[m.faculty] = new Set();
+    majorMap[m.faculty].add(m.label||'');
   });
 
-  container.innerHTML = byFaculty.map((fac, fi) => {
-    const majors = majorMap[fac.label] || [];
-    const maxMaj = Math.max(...majors.map(m => +m.count), 1);
+  container.innerHTML = allFaculties.map((facName, fi) => {
+    const att    = allFacMap[facName] || 0;
+    const tot    = tgtFacMap[facName] || 0;
     const color  = COLORS[fi % COLORS.length];
-    const pct    = Math.round(+fac.count / maxFac * 100);
+    // % แสดง: ถ้ามี target → att/tot, ถ้าไม่มี → att/totalAttended
+    const pct    = hasTarget
+      ? (tot > 0 ? Math.round(att / tot * 100) : 0)
+      : Math.round(att / Math.max(...Object.values(allFacMap), 1) * 100);
 
-    const majorRows = majors.map(m => `
-      <div class="major-row">
-        <div class="major-name">${esc(m.label || '—')}</div>
-        <div class="major-count">${Number(m.count).toLocaleString()} คน</div>
-        <div class="major-bar-wrap">
-          <div class="major-bar-fill" style="width:${Math.round(+m.count/maxMaj*100)}%;background:${color}88"></div>
-        </div>
-      </div>
-    `).join('');
+    const majors = majorMap[facName] ? [...majorMap[facName]].sort((a,b)=>a.localeCompare(b,'th')) : [];
+    const maxMajAtt = Math.max(...majors.map(m => attMajMap[`${facName}||${m}`]||0), 1);
+
+    const majorRows = majors.map(maj => {
+      const mAtt = attMajMap[`${facName}||${maj}`] || 0;
+      const mTot = tgtMajMap[`${facName}||${maj}`] || 0;
+      const mPct = hasTarget
+        ? (mTot > 0 ? Math.round(mAtt / mTot * 100) : 0)
+        : Math.round(mAtt / maxMajAtt * 100);
+      return `
+        <div class="major-row">
+          <div class="major-name">${esc(maj || '—')}</div>
+          <div class="major-count">
+            ${hasTarget
+              ? `<span style="color:#fff;font-weight:600">${mAtt.toLocaleString()}</span><span style="color:var(--muted);font-size:11px"> / ${mTot.toLocaleString()}</span>`
+              : `${mAtt.toLocaleString()} คน`}
+          </div>
+          <div class="major-bar-wrap">
+            ${hasTarget && mTot > 0 ? `<div class="major-bar-fill" style="width:${Math.min(mPct,100)}%;background:rgba(148,163,184,0.3)"></div>` : ''}
+            <div class="major-bar-fill" style="width:${Math.min(mPct,100)}%;background:${color}88;position:${hasTarget?'absolute':'relative'};top:0;left:0;height:100%"></div>
+          </div>
+          ${hasTarget ? `<div style="font-size:11px;color:${mPct>=100?'var(--green)':color};font-weight:600;min-width:36px;text-align:right">${mPct}%</div>` : ''}
+        </div>`;
+    }).join('');
+
+    const headerCount = hasTarget
+      ? `<div class="fac-group-count">${att.toLocaleString()} <span style="color:var(--muted);font-size:11px">/ ${tot.toLocaleString()}</span></div>
+         <div class="fac-group-pct" style="color:${pct>=100?'var(--green)':color}">${pct}%</div>`
+      : `<div class="fac-group-count">${att.toLocaleString()} คน</div>
+         <div class="fac-group-pct">(${pct}%)</div>`;
 
     return `
       <div class="fac-group">
         <div class="fac-group-header" data-fac="${fi}">
           <div style="width:10px;height:10px;border-radius:3px;flex-shrink:0;background:${color}"></div>
-          <div class="fac-group-name">${esc(fac.label || '—')}</div>
-          <div class="fac-group-count">${Number(fac.count).toLocaleString()} คน</div>
-          <div class="fac-group-pct">(${pct}%)</div>
+          <div class="fac-group-name">${esc(facName || '—')}</div>
+          ${headerCount}
           <i class="fa-solid fa-chevron-right fac-toggle"></i>
         </div>
         <div class="major-list" id="major-${fi}">
           ${majorRows || '<div class="major-row"><div class="major-name" style="color:var(--muted)">—</div></div>'}
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
 
   // Toggle accordion
   container.querySelectorAll('.fac-group-header').forEach(h => {
     h.addEventListener('click', () => {
-      const idx = h.dataset.fac;
+      const idx  = h.dataset.fac;
       const list = document.getElementById(`major-${idx}`);
       const icon = h.querySelector('.fac-toggle');
-      const isOpen = list.classList.toggle('open');
-      icon.classList.toggle('open', isOpen);
+      list.classList.toggle('open');
+      icon.classList.toggle('open', list.classList.contains('open'));
     });
   });
 
   // Auto-open first faculty
-  if (byFaculty.length > 0) {
-    const first = container.querySelector('.fac-group-header');
-    if (first) first.click();
-  }
+  const first = container.querySelector('.fac-group-header');
+  if (first) first.click();
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────

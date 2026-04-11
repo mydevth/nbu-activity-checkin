@@ -102,7 +102,8 @@ router.get('/:activityId', async (req, res) => {
         }
         const tgt = buildTargetWhere('s');
 
-        const [totalRes, byFacultyRes, byFacultyMajorRes, recentRes, targetCountRes, absentRes] = await Promise.all([
+        const [totalRes, byFacultyRes, byFacultyMajorRes, recentRes, targetCountRes, absentRes,
+               attendedRes, tgtByFacultyRes, tgtByMajorRes] = await Promise.all([
             // รวมทั้งหมด
             scope
                 ? query(`SELECT COUNT(*) AS c FROM nbu_attendance att
@@ -129,7 +130,7 @@ router.get('/:activityId', async (req, res) => {
                 ORDER BY s.faculty, count DESC
             `, p2),
 
-            // เช็คชื่อล่าสุด 15 คน
+            // เช็คชื่อล่าสุด 15 คน (สำหรับ live feed)
             query(`
                 SELECT att.checked_at, att.method,
                        s.full_name, s.faculty, s.major, s.student_id
@@ -152,7 +153,8 @@ router.get('/:activityId', async (req, res) => {
             // รายชื่อที่ยังไม่เข้าร่วม (เฉพาะกรณีมี targets)
             hasTargets
                 ? query(`
-                    SELECT s.student_id, s.full_name, s.faculty, s.major, s.year
+                    SELECT s.student_id, s.full_name, s.faculty, s.major,
+                           SUBSTRING(s.student_id, 1, 2) AS cohort
                     FROM nbu_students s
                     WHERE ${tgt.clause}
                     ${scope ? `AND s.faculty = '${scope.replace(/'/g, "''")}'` : ''}
@@ -161,6 +163,38 @@ router.get('/:activityId', async (req, res) => {
                     )
                     ORDER BY s.faculty, s.major, s.student_id
                   `, [activityId])
+                : Promise.resolve({ rows: [] }),
+
+            // รายชื่อผู้เข้าร่วมทั้งหมด (สำหรับ export)
+            query(`
+                SELECT s.student_id, s.full_name, s.faculty, s.major,
+                       SUBSTRING(s.student_id, 1, 2) AS cohort
+                FROM nbu_attendance att
+                JOIN nbu_students s ON s.student_id = att.student_id
+                WHERE att.activity_id = $1 ${filt}
+                ORDER BY s.faculty, s.major, s.student_id
+            `, p2),
+
+            // เป้าหมายแยกตามคณะ
+            hasTargets
+                ? query(`
+                    SELECT s.faculty AS label, COUNT(DISTINCT s.student_id) AS total
+                    FROM nbu_students s
+                    WHERE ${tgt.clause}
+                    ${scope ? `AND s.faculty = '${scope.replace(/'/g, "''")}'` : ''}
+                    GROUP BY s.faculty ORDER BY s.faculty
+                  `)
+                : Promise.resolve({ rows: [] }),
+
+            // เป้าหมายแยกตามคณะ + สาขา
+            hasTargets
+                ? query(`
+                    SELECT s.faculty, s.major AS label, COUNT(DISTINCT s.student_id) AS total
+                    FROM nbu_students s
+                    WHERE ${tgt.clause}
+                    ${scope ? `AND s.faculty = '${scope.replace(/'/g, "''")}'` : ''}
+                    GROUP BY s.faculty, s.major ORDER BY s.faculty, s.major
+                  `)
                 : Promise.resolve({ rows: [] }),
         ]);
 
@@ -176,6 +210,9 @@ router.get('/:activityId', async (req, res) => {
                 attendance_rate:  target_count > 0 ? Math.round(attended / target_count * 100) : null,
                 by_faculty:       byFacultyRes.rows,
                 by_faculty_major: byFacultyMajorRes.rows,
+                attended:         attendedRes.rows,
+                tgt_by_faculty:   tgtByFacultyRes.rows,
+                tgt_by_major:     tgtByMajorRes.rows,
                 recent:           recentRes.rows,
                 absent:           absentRes.rows,
                 targets:          targetRows,

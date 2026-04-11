@@ -64,7 +64,8 @@ router.get('/stats/:activityId', async (req, res) => {
             return `(${parts.join(' OR ')})`;
         }
 
-        const [totalRes, byFacultyRes, byMajorRes, targetCountRes] = await Promise.all([
+        const tgtWhere = buildTargetWhere('s');
+        const [totalRes, byFacultyRes, byMajorRes, targetCountRes, tgtByFacultyRes, tgtByMajorRes] = await Promise.all([
             query(`SELECT COUNT(*) AS c FROM nbu_attendance WHERE activity_id = $1`, [activityId]),
             query(`
                 SELECT s.faculty AS label, COUNT(*) AS count
@@ -81,8 +82,14 @@ router.get('/stats/:activityId', async (req, res) => {
                 GROUP BY s.faculty, s.major ORDER BY s.faculty, count DESC
             `, [activityId]),
             hasTargets
-                ? query(`SELECT COUNT(DISTINCT s.student_id) AS c FROM nbu_students s WHERE ${buildTargetWhere('s')}`)
+                ? query(`SELECT COUNT(DISTINCT s.student_id) AS c FROM nbu_students s WHERE ${tgtWhere}`)
                 : Promise.resolve({ rows: [{ c: 0 }] }),
+            hasTargets
+                ? query(`SELECT s.faculty AS label, COUNT(DISTINCT s.student_id) AS total FROM nbu_students s WHERE ${tgtWhere} GROUP BY s.faculty ORDER BY s.faculty`)
+                : Promise.resolve({ rows: [] }),
+            hasTargets
+                ? query(`SELECT s.faculty, s.major AS label, COUNT(DISTINCT s.student_id) AS total FROM nbu_students s WHERE ${tgtWhere} GROUP BY s.faculty, s.major ORDER BY s.faculty, s.major`)
+                : Promise.resolve({ rows: [] }),
         ]);
 
         const total        = parseInt(totalRes.rows[0]?.c || 0);
@@ -97,6 +104,8 @@ router.get('/stats/:activityId', async (req, res) => {
                 attendance_rate: target_count > 0 ? Math.round(total / target_count * 100) : null,
                 by_faculty:      byFacultyRes.rows,
                 by_major:        byMajorRes.rows,
+                tgt_by_faculty:  tgtByFacultyRes.rows,
+                tgt_by_major:    tgtByMajorRes.rows,
             },
         });
     } catch (err) {
