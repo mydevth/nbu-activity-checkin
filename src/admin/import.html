@@ -23,17 +23,61 @@
     --border: #dee2e6;
     --radius: 10px;
     --shadow: 0 2px 12px rgba(0,0,0,.08);
+    --sidebar-w: 240px;
   }
-  body { font-family: 'Prompt', 'Segoe UI', sans-serif; background: #f0f4ff; color: #212529; }
+  body { font-family: 'Prompt', 'Segoe UI', sans-serif; background: #f0f4ff; color: #212529; display: flex; min-height: 100vh; }
 
-  /* Nav */
-  .nav { background: var(--primary); color: #fff; padding: 0 24px; display: flex; align-items: center; gap: 16px; height: 56px; }
-  .nav-logo { font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; text-decoration: none; color: #fff; }
-  .nav-back { color: rgba(255,255,255,.8); text-decoration: none; font-size: .9rem; display: flex; align-items: center; gap: 6px; margin-left: auto; }
-  .nav-back:hover { color: #fff; }
+  /* ─── Sidebar ─── */
+  .sidebar {
+    width: var(--sidebar-w); background: var(--primary); color: #fff;
+    display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+  }
+  .sidebar-logo { padding: 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .sidebar-logo h1 { font-size: 15px; font-weight: 700; line-height: 1.4; color: #fff; }
+  .sidebar-logo p  { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+  .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+  .nav-section { padding: 8px 16px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; font-size: 14px; cursor: pointer;
+    border-left: 3px solid transparent; transition: background 0.15s;
+    text-decoration: none; color: rgba(255,255,255,0.8);
+  }
+  .nav-item:hover  { background: rgba(255,255,255,0.08); color: #fff; }
+  .nav-item.active { background: rgba(255,255,255,0.12); border-left-color: #fff; color: #fff; font-weight: 600; }
+  .nav-item .icon  { font-size: 15px; width: 20px; text-align: center; }
+  .sidebar-footer {
+    padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.1);
+    font-size: 13px; opacity: 0.8;
+  }
+  .user-info { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+  }
+  .btn-logout-side {
+    width: 100%; padding: 8px;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px; color: #fff; font-size: 13px;
+    cursor: pointer; font-family: inherit; transition: background 0.15s;
+  }
+  .btn-logout-side:hover { background: rgba(255,255,255,0.2); }
 
-  /* Main */
-  .main { max-width: 860px; margin: 32px auto; padding: 0 16px 60px; }
+  /* ─── Main wrapper ─── */
+  .main-wrap { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar {
+    background: #fff; border-bottom: 1px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar h2 { font-size: 18px; font-weight: 700; color: var(--primary); }
+  .topbar-right { font-size: 13px; color: var(--gray-600); }
+
+  /* Main content */
+  .main { max-width: 860px; margin: 32px auto; padding: 0 24px 60px; width: 100%; }
   h1 { font-size: 1.5rem; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
   .subtitle { color: var(--gray-600); font-size: .9rem; margin-bottom: 28px; }
 
@@ -138,18 +182,51 @@
 </head>
 <body>
 
-<!-- Nav -->
-<nav class="nav">
-  <a class="nav-logo" href="/admin">
-    <i class="fa-solid fa-shield-halved"></i> NBU Activity
-  </a>
-  <a class="nav-back" href="/admin">
-    <i class="fa-solid fa-arrow-left"></i> กลับหน้า Admin
-  </a>
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>NBU Activity</h1>
+    <p>Admin Panel</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">หลัก</div>
+    <a class="nav-item" href="/admin">
+      <span class="icon"><i class="fa-solid fa-chart-pie"></i></span> Dashboard
+    </a>
+    <a class="nav-item" href="/admin">
+      <span class="icon"><i class="fa-solid fa-calendar-days"></i></span> กิจกรรม
+    </a>
+    <div class="nav-section">จัดการ</div>
+    <a class="nav-item" href="/admin">
+      <span class="icon"><i class="fa-solid fa-users"></i></span> ผู้ใช้งาน
+    </a>
+    <a class="nav-item" href="/admin">
+      <span class="icon"><i class="fa-solid fa-file-lines"></i></span> รายงาน
+    </a>
+    <a class="nav-item active" href="/admin/import">
+      <span class="icon"><i class="fa-solid fa-file-import"></i></span> นำเข้านักศึกษา
+    </a>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="avatar" id="sidebar-avatar">?</div>
+      <div>
+        <div style="font-weight:600;font-size:13px" id="sidebar-name">-</div>
+        <div style="font-size:11px;opacity:0.6" id="sidebar-role">-</div>
+      </div>
+    </div>
+    <button class="btn-logout-side" onclick="doLogout()">ออกจากระบบ</button>
+  </div>
 </nav>
 
+<!-- Main wrapper -->
+<div class="main-wrap">
+  <div class="topbar">
+    <h2><i class="fa-solid fa-file-import"></i> นำเข้าข้อมูลนักศึกษา</h2>
+    <div class="topbar-right" id="topbar-user"></div>
+  </div>
+
 <div class="main">
-  <h1><i class="fa-solid fa-file-import" style="color:var(--primary);margin-right:8px"></i>นำเข้าข้อมูลนักศึกษา</h1>
   <p class="subtitle">อัปโหลดไฟล์ CSV จากระบบทะเบียน → ระบบจะดาวน์โหลดรูปภาพและบันทึกลง PostgreSQL + Redis อัตโนมัติ</p>
 
   <!-- Steps -->
@@ -610,6 +687,28 @@ function resetAll() {
     document.getElementById('progress-pct').textContent = '0%';
     goStep(1);
 }
+
+// ─── Sidebar user info ────────────────────────────────────────────────────────
+function decodeJWT(t) {
+    const b64 = t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '=');
+    const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+}
+function doLogout() {
+    localStorage.removeItem('admin_token');
+    window.location.href = '/admin/';
+}
+if (token) {
+    try {
+        const p = decodeJWT(token);
+        document.getElementById('sidebar-name').textContent = p.full_name || p.username || '-';
+        document.getElementById('sidebar-role').textContent = p.role || '-';
+        document.getElementById('sidebar-avatar').textContent = (p.full_name || p.username || '?')[0].toUpperCase();
+        document.getElementById('topbar-user').textContent = p.full_name || p.username || '';
+    } catch {}
+}
 </script>
+</div><!-- end main-wrap -->
 </body>
 </html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBU Activity — รายงานกิจกรรม</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue:    #003B7A;
+  --accent:  #0077ff;
+  --cyan:    #00c6ff;
+  --bg:      #060d1a;
+  --surface: rgba(255,255,255,0.04);
+  --border:  rgba(255,255,255,0.08);
+  --text:    #f1f5f9;
+  --muted:   #94a3b8;
+  --green:   #22c55e;
+}
+
+html, body {
+  min-height: 100%;
+  font-family: 'Prompt', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ─── Animated background ─── */
+.bg-wrap { position: fixed; inset: 0; z-index: 0;
+  background: radial-gradient(ellipse at 20% 30%, #001a40 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 70%, #001a3a 0%, transparent 60%), #060d1a; }
+.orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.15; animation: float linear infinite; }
+.orb1 { width:500px;height:500px;background:#0055b3;top:-100px;left:-100px;animation-duration:22s; }
+.orb2 { width:350px;height:350px;background:#00c6ff;bottom:-80px;right:-80px;animation-duration:28s;animation-direction:reverse; }
+@keyframes float {
+  0%   { transform: translate(0,0) scale(1); }
+  33%  { transform: translate(30px,-20px) scale(1.05); }
+  66%  { transform: translate(-20px,30px) scale(0.95); }
+  100% { transform: translate(0,0) scale(1); }
+}
+.grid-overlay { position:fixed;inset:0;z-index:0;
+  background-image: linear-gradient(rgba(0,119,255,0.04) 1px,transparent 1px),
+                    linear-gradient(90deg,rgba(0,119,255,0.04) 1px,transparent 1px);
+  background-size: 60px 60px; }
+
+/* ─── Layout ─── */
+.wrap { position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:40px 20px 80px; }
+
+/* ─── Header ─── */
+.page-header {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 36px;
+  animation: fadeUp 0.6s ease both;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.logo-ring {
+  width:56px;height:56px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,#0055b3,var(--cyan));
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;color:#fff;
+  box-shadow:0 0 0 8px rgba(0,119,255,0.1),0 0 40px rgba(0,198,255,0.2);
+}
+.header-text h1 { font-size:clamp(20px,4vw,28px);font-weight:800;
+  background:linear-gradient(135deg,#fff 40%,var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+.header-text p { color:var(--muted);font-size:13px;margin-top:2px; }
+.header-badge {
+  margin-left: auto;
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);
+  color:var(--green);padding:6px 14px;border-radius:99px;font-size:12px;font-weight:600;
+}
+.badge-dot { width:6px;height:6px;border-radius:50%;background:var(--green);
+  animation:blink 1.5s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+/* ─── Activity list ─── */
+.section-title {
+  font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:16px;
+}
+
+.act-grid {
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;
+  animation:fadeUp 0.6s 0.15s ease both;margin-bottom:48px;
+}
+
+.act-card {
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:20px;cursor:pointer;
+  transition:transform 0.2s,border-color 0.2s,box-shadow 0.2s,background 0.2s;
+  position:relative;overflow:hidden;
+}
+.act-card::before { content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,var(--accent) 0%,transparent 60%);
+  opacity:0;border-radius:inherit;transition:opacity 0.3s; }
+.act-card:hover { transform:translateY(-4px);border-color:var(--accent);
+  box-shadow:0 12px 40px rgba(0,0,0,0.4),0 0 0 1px var(--accent);
+  background:rgba(255,255,255,0.06); }
+.act-card:hover::before { opacity:0.05; }
+.act-card:active { transform:translateY(-1px); }
+
+.act-card-top { display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;position:relative;z-index:1; }
+.act-icon { width:44px;height:44px;border-radius:12px;flex-shrink:0;
+  background:rgba(0,119,255,0.15);border:1px solid rgba(0,119,255,0.25);
+  display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--accent); }
+.act-meta h3 { font-size:15px;font-weight:700;line-height:1.3;margin-bottom:4px; }
+.act-meta .act-date { font-size:12px;color:var(--muted); }
+.act-badge-count {
+  margin-left:auto;flex-shrink:0;
+  background:rgba(0,119,255,0.15);border:1px solid rgba(0,119,255,0.3);
+  color:var(--accent);border-radius:99px;padding:4px 12px;
+  font-size:13px;font-weight:700;
+}
+.act-location { position:relative;z-index:1;
+  font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;
+  padding-top:10px;border-top:1px solid var(--border); }
+
+/* ─── Detail panel ─── */
+#detail-panel { animation:fadeUp 0.5s ease both; }
+
+.back-btn {
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.06);border:1px solid var(--border);
+  color:var(--text);padding:8px 16px;border-radius:8px;
+  font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:24px;
+  transition:background 0.2s;
+}
+.back-btn:hover { background:rgba(255,255,255,0.1); }
+
+.detail-header { margin-bottom:28px; }
+.detail-title { font-size:clamp(18px,4vw,26px);font-weight:800;margin-bottom:6px;
+  background:linear-gradient(135deg,#fff 40%,var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+.detail-meta { display:flex;flex-wrap:wrap;gap:12px;margin-top:10px; }
+.detail-chip {
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,0.06);border:1px solid var(--border);
+  border-radius:99px;padding:4px 14px;font-size:12px;color:var(--muted);
+}
+.detail-chip i { color:var(--accent);font-size:11px; }
+
+/* ─── Stats row ─── */
+.stats-row { display:flex;flex-wrap:wrap;gap:16px;margin-bottom:32px; }
+.stat-box {
+  flex:1;min-width:160px;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:18px 20px;text-align:center;
+}
+.stat-box .stat-num { font-size:36px;font-weight:800;color:#fff;line-height:1; }
+.stat-box .stat-lbl { font-size:12px;color:var(--muted);margin-top:4px; }
+
+/* ─── Chart ─── */
+.chart-wrap {
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:24px;margin-bottom:32px;
+}
+.chart-title { font-size:14px;font-weight:600;margin-bottom:20px; }
+.chart-container { position:relative;height:280px; }
+
+/* ─── Faculty table ─── */
+.fac-table { width:100%;border-collapse:collapse; }
+.fac-table th, .fac-table td { padding:10px 14px;text-align:left;border-bottom:1px solid var(--border); }
+.fac-table th { font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px; }
+.fac-table td { font-size:14px; }
+.fac-table tr:last-child td { border-bottom:none; }
+.fac-bar-wrap { position:relative;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;min-width:80px; }
+.fac-bar { position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,var(--accent),var(--cyan));border-radius:3px;transition:width 0.8s ease; }
+
+/* ─── Skeleton ─── */
+.skeleton { background:rgba(255,255,255,0.06);border-radius:8px;animation:pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+
+/* ─── Empty ─── */
+.empty { text-align:center;color:var(--muted);padding:60px 20px; }
+.empty i { font-size:48px;margin-bottom:16px;opacity:0.3; }
+
+/* ─── Footer ─── */
+footer { position:relative;z-index:1;margin-top:60px;text-align:center;
+  color:rgba(255,255,255,0.2);font-size:12px; }
+footer strong { color:rgba(255,255,255,0.35); }
+
+/* ─── Responsive ─── */
+@media (max-width:600px) {
+  .wrap { padding:28px 14px 60px; }
+  .page-header { flex-wrap:wrap; }
+  .header-badge { margin-left:0; }
+  .chart-container { height:220px; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-wrap">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+</div>
+<div class="grid-overlay"></div>
+
+<div class="wrap">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div class="logo-ring"><i class="fa-solid fa-chart-bar"></i></div>
+    <div class="header-text">
+      <h1>รายงานกิจกรรม</h1>
+      <p>NBU Activity — สถิติการเข้าร่วมกิจกรรม มหาวิทยาลัยนอร์ทกรุงเทพ</p>
+    </div>
+    <div class="header-badge">
+      <span class="badge-dot"></span>
+      ข้อมูลสาธารณะ
+    </div>
+  </div>
+
+  <!-- Activity list view -->
+  <div id="list-view">
+    <div class="section-title">กิจกรรมที่เปิดใช้งาน</div>
+    <div class="act-grid" id="act-grid">
+      <!-- cards loaded by JS -->
+    </div>
+  </div>
+
+  <!-- Detail view -->
+  <div id="detail-panel" style="display:none">
+    <button class="back-btn" onclick="showList()">
+      <i class="fa-solid fa-arrow-left"></i> กลับรายการ
+    </button>
+    <div class="detail-header">
+      <div class="detail-title" id="d-title"></div>
+      <div class="detail-meta" id="d-meta"></div>
+    </div>
+    <div class="stats-row" id="d-stats-row"></div>
+    <div class="chart-wrap">
+      <div class="chart-title"><i class="fa-solid fa-chart-bar" style="color:var(--accent);margin-right:8px"></i>ผู้เข้าร่วมแยกตามคณะ</div>
+      <div class="chart-container">
+        <canvas id="faculty-chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-wrap" id="fac-table-wrap">
+      <div class="chart-title"><i class="fa-solid fa-table" style="color:var(--accent);margin-right:8px"></i>สรุปจำนวนแยกคณะ</div>
+      <table class="fac-table" id="fac-table"></table>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <strong>NBU Activity Check-in System</strong> &nbsp;·&nbsp; มหาวิทยาลัยนอร์ทกรุงเทพ
+  &nbsp;·&nbsp; ข้อมูลอัปเดตอัตโนมัติทุก 60 วินาที
+</footer>
+
+<script>
+const API = '/api/v1/public';
+let facultyChart = null;
+let detailRefreshTimer = null;
+let currentActivityId = null;
+
+// ─── Format date ──────────────────────────────────────────────────────────────
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('th-TH', {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+// ─── Load activity list ───────────────────────────────────────────────────────
+async function loadActivities() {
+  const grid = document.getElementById('act-grid');
+  grid.innerHTML = `
+    <div class="act-card"><div class="skeleton" style="height:100px"></div></div>
+    <div class="act-card"><div class="skeleton" style="height:100px"></div></div>
+    <div class="act-card"><div class="skeleton" style="height:100px"></div></div>
+  `;
+  try {
+    const res = await fetch(`${API}/activities`);
+    const { success, data } = await res.json();
+    if (!success || !data.length) {
+      grid.innerHTML = `<div class="empty"><i class="fa-solid fa-calendar-xmark"></i><p>ไม่มีกิจกรรมที่เปิดใช้งาน</p></div>`;
+      return;
+    }
+    grid.innerHTML = data.map(a => `
+      <div class="act-card" onclick="showDetail(${a.id})">
+        <div class="act-card-top">
+          <div class="act-icon"><i class="fa-solid fa-calendar-check"></i></div>
+          <div class="act-meta">
+            <h3>${esc(a.title)}</h3>
+            <div class="act-date"><i class="fa-regular fa-clock" style="margin-right:4px"></i>${fmtDate(a.start_datetime)}</div>
+          </div>
+          <div class="act-badge-count">${a.attendee_count} คน</div>
+        </div>
+        <div class="act-location">
+          <i class="fa-solid fa-location-dot"></i>
+          ${esc(a.location || '—')}
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    grid.innerHTML = `<div class="empty"><i class="fa-solid fa-triangle-exclamation"></i><p>เกิดข้อผิดพลาดในการโหลดข้อมูล</p></div>`;
+  }
+}
+
+// ─── Show detail ──────────────────────────────────────────────────────────────
+async function showDetail(activityId) {
+  currentActivityId = activityId;
+  document.getElementById('list-view').style.display = 'none';
+  document.getElementById('detail-panel').style.display = 'block';
+
+  // placeholder
+  document.getElementById('d-title').textContent = 'กำลังโหลด...';
+  document.getElementById('d-meta').innerHTML = '';
+  document.getElementById('d-stats-row').innerHTML = `<div class="stat-box"><div class="skeleton" style="height:60px"></div></div>`;
+
+  await fetchDetail(activityId);
+
+  // auto-refresh every 60s
+  clearInterval(detailRefreshTimer);
+  detailRefreshTimer = setInterval(() => fetchDetail(activityId), 60000);
+}
+
+async function fetchDetail(activityId) {
+  try {
+    const res = await fetch(`${API}/stats/${activityId}`);
+    const { success, data } = await res.json();
+    if (!success) return;
+
+    const { activity, total, by_faculty } = data;
+
+    // Title & meta
+    document.getElementById('d-title').textContent = activity.title;
+    document.getElementById('d-meta').innerHTML = `
+      <span class="detail-chip"><i class="fa-regular fa-clock"></i> ${fmtDate(activity.start_datetime)}</span>
+      <span class="detail-chip"><i class="fa-solid fa-location-dot"></i> ${esc(activity.location || '—')}</span>
+      ${activity.description ? `<span class="detail-chip"><i class="fa-solid fa-info-circle"></i> ${esc(activity.description)}</span>` : ''}
+    `;
+
+    // Stats
+    document.getElementById('d-stats-row').innerHTML = `
+      <div class="stat-box">
+        <div class="stat-num">${total.toLocaleString()}</div>
+        <div class="stat-lbl">ผู้เข้าร่วมทั้งหมด (คน)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">${by_faculty.length}</div>
+        <div class="stat-lbl">คณะที่เข้าร่วม</div>
+      </div>
+    `;
+
+    // Chart
+    renderFacultyChart(by_faculty);
+
+    // Table
+    const maxCount = by_faculty[0]?.count || 1;
+    const tbl = document.getElementById('fac-table');
+    tbl.innerHTML = `
+      <thead><tr>
+        <th>#</th><th>คณะ</th><th>จำนวน (คน)</th><th>สัดส่วน</th>
+      </tr></thead>
+      <tbody>${by_faculty.map((f, i) => `
+        <tr>
+          <td style="color:var(--muted)">${i+1}</td>
+          <td>${esc(f.label || '—')}</td>
+          <td style="font-weight:700;color:#fff">${parseInt(f.count).toLocaleString()}</td>
+          <td style="min-width:120px">
+            <div class="fac-bar-wrap">
+              <div class="fac-bar" style="width:${Math.round(f.count/maxCount*100)}%"></div>
+            </div>
+          </td>
+        </tr>
+      `).join('')}</tbody>
+    `;
+
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function renderFacultyChart(byFaculty) {
+  const labels = byFaculty.map(f => f.label || '—');
+  const counts = byFaculty.map(f => parseInt(f.count));
+
+  const COLORS = [
+    '#0077ff','#00c6ff','#22c55e','#f59e0b','#a855f7',
+    '#ef4444','#06b6d4','#84cc16','#f97316','#ec4899',
+  ];
+
+  if (facultyChart) { facultyChart.destroy(); facultyChart = null; }
+
+  const ctx = document.getElementById('faculty-chart').getContext('2d');
+  facultyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'จำนวนนักศึกษา',
+        data: counts,
+        backgroundColor: labels.map((_, i) => COLORS[i % COLORS.length] + 'cc'),
+        borderColor:     labels.map((_, i) => COLORS[i % COLORS.length]),
+        borderWidth: 1,
+        borderRadius: 6,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.raw.toLocaleString()} คน`,
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { color: '#94a3b8', font: { family: 'Prompt', size: 11 } },
+             grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#94a3b8', font: { family: 'Prompt' } },
+             grid: { color: 'rgba(255,255,255,0.06)' },
+             beginAtZero: true },
+      },
+    },
+  });
+}
+
+function showList() {
+  clearInterval(detailRefreshTimer);
+  currentActivityId = null;
+  document.getElementById('detail-panel').style.display = 'none';
+  document.getElementById('list-view').style.display = 'block';
+  loadActivities();
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+loadActivities();
+// auto-refresh list every 60s
+setInterval(() => {
+  if (!currentActivityId) loadActivities();
+}, 60000);
+</script>
+</body>
+</html>

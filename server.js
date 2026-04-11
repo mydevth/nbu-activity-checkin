@@ -16,6 +16,7 @@ import statsRoutes      from './src/api/routes/stats.js';
 import userRoutes       from './src/api/routes/users.js';
 import importRoutes     from './src/api/routes/import.js';
 import liffRoutes       from './src/api/routes/liff.js';
+import publicRoutes     from './src/api/routes/public.js';
 import lineWebhook      from './src/line-oa/webhook.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -41,6 +42,7 @@ app.use('/scanner', express.static(path.join(__dirname, 'src/scanner'), staticOp
 app.use('/mobile',  express.static(path.join(__dirname, 'src/mobile'),  staticOpts));
 app.use('/stats',   express.static(path.join(__dirname, 'src/stats'),   staticOpts));
 app.use('/liff',    express.static(path.join(__dirname, 'src/liff'),    staticOpts));
+app.use('/report',  express.static(path.join(__dirname, 'src/report'),  staticOpts));
 
 // ─── API Routes ────────────────────────────────────────────────────────────
 app.use('/api/v1/auth',       authRoutes);
@@ -52,6 +54,7 @@ app.use('/api/v1/stats',      statsRoutes);
 app.use('/api/v1/users',      userRoutes);
 app.use('/api/v1/import',     importRoutes);
 app.use('/api/v1/liff',       liffRoutes);
+app.use('/api/v1/public',    publicRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
