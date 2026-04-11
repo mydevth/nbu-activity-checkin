@@ -40,11 +40,24 @@ router.get('/stats/:activityId', async (req, res) => {
             return res.status(404).json({ success: false, message: 'ไม่พบกิจกรรม' });
         }
 
-        const [totalRes, byFacultyRes, byMajorRes] = await Promise.all([
-            query(
-                `SELECT COUNT(*) AS c FROM nbu_attendance WHERE activity_id = $1`,
-                [activityId]
-            ),
+        const { rows: targetRows } = await query(
+            'SELECT faculty, year FROM nbu_activity_targets WHERE activity_id = $1',
+            [activityId]
+        );
+        const hasTargets = targetRows.length > 0;
+
+        function buildTargetWhere(alias = 's') {
+            if (!hasTargets) return 'TRUE';
+            const parts = targetRows.map(t => {
+                const fc = t.faculty ? `${alias}.faculty = '${t.faculty.replace(/'/g, "''")}'` : 'TRUE';
+                const yr = t.year    ? `${alias}.year = ${parseInt(t.year)}`                    : 'TRUE';
+                return `(${fc} AND ${yr})`;
+            });
+            return `(${parts.join(' OR ')})`;
+        }
+
+        const [totalRes, byFacultyRes, byMajorRes, targetCountRes] = await Promise.all([
+            query(`SELECT COUNT(*) AS c FROM nbu_attendance WHERE activity_id = $1`, [activityId]),
             query(`
                 SELECT s.faculty AS label, COUNT(*) AS count
                 FROM nbu_attendance att
@@ -59,15 +72,23 @@ router.get('/stats/:activityId', async (req, res) => {
                 WHERE att.activity_id = $1
                 GROUP BY s.faculty, s.major ORDER BY s.faculty, count DESC
             `, [activityId]),
+            hasTargets
+                ? query(`SELECT COUNT(DISTINCT s.student_id) AS c FROM nbu_students s WHERE ${buildTargetWhere('s')}`)
+                : Promise.resolve({ rows: [{ c: 0 }] }),
         ]);
+
+        const total        = parseInt(totalRes.rows[0]?.c || 0);
+        const target_count = parseInt(targetCountRes.rows[0]?.c || 0);
 
         return res.json({
             success: true,
             data: {
-                activity:   actRes.rows[0],
-                total:      parseInt(totalRes.rows[0]?.c || 0),
-                by_faculty: byFacultyRes.rows,
-                by_major:   byMajorRes.rows,
+                activity:        actRes.rows[0],
+                total,
+                target_count,
+                attendance_rate: target_count > 0 ? Math.round(total / target_count * 100) : null,
+                by_faculty:      byFacultyRes.rows,
+                by_major:        byMajorRes.rows,
             },
         });
     } catch (err) {

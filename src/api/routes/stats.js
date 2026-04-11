@@ -73,7 +73,26 @@ router.get('/:activityId', async (req, res) => {
             return res.status(404).json({ success: false, message: 'ไม่พบกิจกรรม' });
         }
 
-        const [totalRes, byFacultyRes, byFacultyMajorRes, recentRes] = await Promise.all([
+        // โหลด targets ของกิจกรรม
+        const { rows: targetRows } = await query(
+            'SELECT faculty, year FROM nbu_activity_targets WHERE activity_id = $1',
+            [activityId]
+        );
+        const hasTargets = targetRows.length > 0;
+
+        // สร้าง WHERE สำหรับกรองนักศึกษาในกลุ่มเป้าหมาย
+        function buildTargetWhere(alias = 's') {
+            if (!hasTargets) return { clause: 'TRUE', params: [] };
+            const parts = targetRows.map(t => {
+                const fc = t.faculty ? `${alias}.faculty = '${t.faculty.replace(/'/g, "''")}'` : 'TRUE';
+                const yr = t.year    ? `${alias}.year = ${parseInt(t.year)}`                    : 'TRUE';
+                return `(${fc} AND ${yr})`;
+            });
+            return { clause: `(${parts.join(' OR ')})`, params: [] };
+        }
+        const tgt = buildTargetWhere('s');
+
+        const [totalRes, byFacultyRes, byFacultyMajorRes, recentRes, targetCountRes, absentRes] = await Promise.all([
             // รวมทั้งหมด
             scope
                 ? query(`SELECT COUNT(*) AS c FROM nbu_attendance att
@@ -90,7 +109,7 @@ router.get('/:activityId', async (req, res) => {
                 GROUP BY s.faculty ORDER BY count DESC
             `, p2),
 
-            // แยกตามคณะ + สาขา (สำหรับ drill-down)
+            // แยกตามคณะ + สาขา
             query(`
                 SELECT s.faculty, s.major AS label, COUNT(*) AS count
                 FROM nbu_attendance att
@@ -109,16 +128,47 @@ router.get('/:activityId', async (req, res) => {
                 WHERE att.activity_id = $1 ${filt}
                 ORDER BY att.checked_at DESC LIMIT 15
             `, p2),
+
+            // จำนวนเป้าหมายทั้งหมด (จากกลุ่มที่กำหนด + scope ของ dean)
+            hasTargets
+                ? query(`
+                    SELECT COUNT(DISTINCT s.student_id) AS c
+                    FROM nbu_students s
+                    WHERE ${tgt.clause}
+                    ${scope ? `AND s.faculty = '${scope.replace(/'/g, "''")}'` : ''}
+                  `)
+                : Promise.resolve({ rows: [{ c: 0 }] }),
+
+            // รายชื่อที่ยังไม่เข้าร่วม (เฉพาะกรณีมี targets)
+            hasTargets
+                ? query(`
+                    SELECT s.student_id, s.full_name, s.faculty, s.major, s.year
+                    FROM nbu_students s
+                    WHERE ${tgt.clause}
+                    ${scope ? `AND s.faculty = '${scope.replace(/'/g, "''")}'` : ''}
+                    AND s.student_id NOT IN (
+                        SELECT att.student_id FROM nbu_attendance att WHERE att.activity_id = $1
+                    )
+                    ORDER BY s.faculty, s.major, s.student_id
+                  `, [activityId])
+                : Promise.resolve({ rows: [] }),
         ]);
+
+        const target_count = parseInt(targetCountRes.rows[0]?.c || 0);
+        const attended     = parseInt(totalRes.rows[0]?.c || 0);
 
         return res.json({
             success: true,
             data: {
                 activity:         actRes.rows[0],
-                total:            parseInt(totalRes.rows[0]?.c || 0),
+                total:            attended,
+                target_count,
+                attendance_rate:  target_count > 0 ? Math.round(attended / target_count * 100) : null,
                 by_faculty:       byFacultyRes.rows,
                 by_faculty_major: byFacultyMajorRes.rows,
                 recent:           recentRes.rows,
+                absent:           absentRes.rows,
+                targets:          targetRows,
                 scope,
             },
         });

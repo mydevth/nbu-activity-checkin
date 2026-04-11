@@ -534,6 +534,47 @@
         <select class="form-control" id="act-staff" multiple style="min-height:100px"></select>
         <p style="font-size:12px;color:var(--muted);margin-top:4px">Ctrl+Click เพื่อเลือกหลายคน</p>
       </div>
+
+      <!-- กลุ่มเป้าหมาย -->
+      <div class="form-group" style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#f8fafc">
+        <label style="font-weight:700;font-size:14px;color:var(--text);display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <i class="fa-solid fa-users" style="color:var(--blue2)"></i> กลุ่มเป้าหมาย
+          <span style="font-weight:400;font-size:12px;color:var(--muted)">(สำหรับนับ % เข้าร่วมและรายชื่อขาด)</span>
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:end;margin-bottom:10px">
+          <div>
+            <label style="font-size:12px;color:var(--muted)">คณะ</label>
+            <select class="form-control" id="tgt-faculty" style="font-size:13px">
+              <option value="">ทุกคณะ</option>
+              <option value="รัฐศาสตร์">รัฐศาสตร์</option>
+              <option value="บริหารธุรกิจ">บริหารธุรกิจ</option>
+              <option value="เทคโนโลยีสารสนเทศและนวัตกรรมดิจิทัล">เทคโนโลยีสารสนเทศฯ</option>
+              <option value="ศิลปศาสตร์">ศิลปศาสตร์</option>
+              <option value="ศึกษาศาสตร์">ศึกษาศาสตร์</option>
+              <option value="พยาบาลศาสตร์">พยาบาลศาสตร์</option>
+              <option value="วิทยาลัยนานาชาติ">วิทยาลัยนานาชาติ</option>
+              <option value="นิเทศศาสตร์">นิเทศศาสตร์</option>
+              <option value="วิเทศสัมพันธ์">วิเทศสัมพันธ์</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted)">ชั้นปี</label>
+            <select class="form-control" id="tgt-year" style="font-size:13px">
+              <option value="">ทุกชั้นปี</option>
+              <option value="1">ปี 1</option>
+              <option value="2">ปี 2</option>
+              <option value="3">ปี 3</option>
+              <option value="4">ปี 4</option>
+              <option value="5">ปี 5</option>
+              <option value="6">ปี 6</option>
+            </select>
+          </div>
+          <button class="btn btn-blue btn-sm" onclick="addTarget()" style="white-space:nowrap">+ เพิ่ม</button>
+          <button class="btn btn-gray btn-sm" onclick="previewTargetCount()" style="white-space:nowrap" id="tgt-preview-btn">คำนวณ</button>
+        </div>
+        <div id="tgt-tags" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px"></div>
+        <div id="tgt-count-msg" style="margin-top:8px;font-size:13px;color:var(--blue2);font-weight:600"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-gray" onclick="closeModal('activity-modal')">ยกเลิก</button>
@@ -810,10 +851,68 @@ function filterActivities() {
   renderActivities(allActivities.filter(a => a.title.toLowerCase().includes(q) || (a.location || '').toLowerCase().includes(q)));
 }
 
+// ─── Target management ────────────────────────────────────────────────────────
+let currentTargets = []; // [{faculty, year}]
+
+function renderTargetTags() {
+  const container = document.getElementById('tgt-tags');
+  document.getElementById('tgt-count-msg').textContent = '';
+  if (!currentTargets.length) {
+    container.innerHTML = '<span style="font-size:12px;color:var(--muted)">ยังไม่ได้กำหนดกลุ่มเป้าหมาย</span>';
+    return;
+  }
+  container.innerHTML = currentTargets.map((t, i) => {
+    const facLabel = t.faculty || 'ทุกคณะ';
+    const yrLabel  = t.year    ? `ปี ${t.year}` : 'ทุกชั้นปี';
+    return `<span style="display:inline-flex;align-items:center;gap:6px;background:#e0edff;color:#0055b3;
+              border:1px solid #b3d0ff;border-radius:99px;padding:3px 10px;font-size:12px;font-weight:600">
+      ${facLabel} — ${yrLabel}
+      <button onclick="removeTarget(${i})" style="background:none;border:none;cursor:pointer;color:#0055b3;
+        font-size:14px;line-height:1;padding:0">&times;</button>
+    </span>`;
+  }).join('');
+}
+
+function addTarget() {
+  const faculty = document.getElementById('tgt-faculty').value || null;
+  const year    = document.getElementById('tgt-year').value    ? parseInt(document.getElementById('tgt-year').value) : null;
+  // ตรวจซ้ำ
+  const dup = currentTargets.some(t =>
+    (t.faculty ?? null) === (faculty ?? null) && (t.year ?? null) === (year ?? null)
+  );
+  if (dup) { toast('กลุ่มนี้มีอยู่แล้ว', 'yellow'); return; }
+  currentTargets.push({ faculty, year });
+  renderTargetTags();
+}
+
+function removeTarget(index) {
+  currentTargets.splice(index, 1);
+  renderTargetTags();
+}
+
+async function previewTargetCount() {
+  if (!currentTargets.length) {
+    document.getElementById('tgt-count-msg').textContent = 'กรุณาเพิ่มกลุ่มเป้าหมายก่อน';
+    return;
+  }
+  const btn = document.getElementById('tgt-preview-btn');
+  btn.textContent = '...';
+  const data = await apiFetch('/activities/targets/preview', {
+    method: 'POST',
+    body: JSON.stringify({ targets: currentTargets }),
+  });
+  btn.textContent = 'คำนวณ';
+  if (data.success) {
+    document.getElementById('tgt-count-msg').textContent =
+      `นักศึกษาในกลุ่มเป้าหมาย: ${data.count.toLocaleString()} คน`;
+  }
+}
+
 async function openActivityModal(id = null) {
   const isEdit = !!id;
   document.getElementById('activity-modal-title').textContent = isEdit ? 'แก้ไขกิจกรรม' : 'สร้างกิจกรรม';
   document.getElementById('act-id').value = '';
+  currentTargets = [];
 
   // โหลด staff list
   await loadStaffList();
@@ -836,6 +935,9 @@ async function openActivityModal(id = null) {
     Array.from(document.getElementById('act-staff').options).forEach(opt => {
       opt.selected = assignedIds.includes(opt.value);
     });
+
+    // โหลด targets
+    currentTargets = (a.targets || []).map(t => ({ faculty: t.faculty || null, year: t.year || null }));
   } else {
     ['act-title','act-desc','act-start','act-end','act-location'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('act-max').value = 0;
@@ -843,6 +945,7 @@ async function openActivityModal(id = null) {
     Array.from(document.getElementById('act-staff').options).forEach(o => o.selected = false);
   }
 
+  renderTargetTags();
   openModal('activity-modal');
 }
 
@@ -865,6 +968,7 @@ async function saveActivity() {
     activity_type:   document.getElementById('act-type').value,
     max_participants: parseInt(document.getElementById('act-max').value) || 0,
     staff_ids:       staffOpts,
+    targets:         currentTargets,
   };
 
   if (!payload.title || !payload.start_datetime || !payload.end_datetime) {

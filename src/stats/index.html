@@ -535,11 +535,29 @@ function renderDashboard() {
       </div>
     </div>
 
+    ${d.target_count > 0 ? `
+    <div class="stat-card" style="background:linear-gradient(135deg,#f0f7ff,#e0edff);border-color:#b3d0ff">
+      <div class="stat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-bullseye"></i></div>
+      <div class="stat-body">
+        <div class="label">เป้าหมาย / เข้าร่วม</div>
+        <div class="value" style="color:#1d4ed8">${d.total.toLocaleString()} <span style="font-size:16px;color:#64748b">/ ${d.target_count.toLocaleString()}</span></div>
+        <div class="sub">
+          <span style="display:inline-block;margin-right:8px">คิดเป็น <strong style="color:#1d4ed8">${d.attendance_rate}%</strong></span>
+          <span style="display:inline-block;background:#dbeafe;border-radius:99px;padding:1px 8px;font-size:11px;color:#2563eb">
+            ขาด ${(d.target_count - d.total).toLocaleString()} คน
+          </span>
+        </div>
+        <div style="margin-top:8px;height:6px;background:#c7d9f0;border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${d.attendance_rate}%;background:linear-gradient(90deg,#2563eb,#60a5fa);border-radius:3px;transition:width 0.8s ease"></div>
+        </div>
+      </div>
+    </div>` : ''}
+
     <div class="stat-card">
       <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
       <div class="stat-body">
         <div class="label">ผู้เข้าร่วมทั้งหมด</div>
-        <div class="value">${d.total}</div>
+        <div class="value">${d.total.toLocaleString()}</div>
         <div class="sub">คน จาก ${distinctFaculties} คณะ</div>
       </div>
     </div>
@@ -578,6 +596,37 @@ function renderDashboard() {
           `).join('')}
       </div>
     </div>
+
+    ${d.absent && d.absent.length > 0 ? `
+    <div class="recent-card" style="margin-top:12px">
+      <h3 style="display:flex;align-items:center;justify-content:space-between">
+        <span><i class="fa-solid fa-user-xmark" style="color:#ef4444"></i> รายชื่อที่ยังไม่เข้าร่วม (${d.absent.length} คน)</span>
+        <button onclick="exportAbsentCSV()" style="font-size:11px;background:#fff5f5;border:1px solid #fca5a5;
+          color:#dc2626;border-radius:6px;padding:3px 10px;cursor:pointer;font-family:inherit">
+          <i class="fa-solid fa-file-csv"></i> Export ขาด
+        </button>
+      </h3>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-weight:600">#</th>
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-weight:600">รหัส</th>
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-weight:600">ชื่อ-นามสกุล</th>
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-weight:600">คณะ / สาขา</th>
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-weight:600">ปี</th>
+          </tr></thead>
+          <tbody>${d.absent.map((s, i) => `
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px 10px;color:var(--muted)">${i+1}</td>
+              <td style="padding:6px 10px;font-family:monospace">${s.student_id}</td>
+              <td style="padding:6px 10px;font-weight:600">${s.full_name}</td>
+              <td style="padding:6px 10px;color:var(--muted)">${s.faculty || ''}${s.major ? ' · ' + s.major : ''}</td>
+              <td style="padding:6px 10px">${s.year || '-'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : ''}
   `;
 
   updateChart();
@@ -713,6 +762,28 @@ function exportCSV() {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportAbsentCSV() {
+  if (!statsData?.absent?.length) return;
+  const d = statsData;
+  const esc = v => { const s = String(v ?? ''); return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g,'""')}"` : s; };
+  const lines = [
+    ['กิจกรรม', esc(d.activity.title)].join(','),
+    ['รายชื่อที่ยังไม่เข้าร่วม', d.absent.length + ' คน'].join(','),
+    '',
+    ['#','รหัสนักศึกษา','ชื่อ-นามสกุล','คณะ','สาขา','ชั้นปี'].join(','),
+    ...d.absent.map((s, i) =>
+      [i+1, s.student_id, esc(s.full_name), esc(s.faculty||''), esc(s.major||''), s.year||''].join(',')
+    ),
+  ];
+  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `absent_${d.activity.title.replace(/[^\u0E00-\u0E7Fa-zA-Z0-9]/g,'_').slice(0,30)}_${Date.now()}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 

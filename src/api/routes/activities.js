@@ -60,12 +60,18 @@ router.get('/:id', async (req, res) => {
         );
         if (!rows.length) return res.status(404).json({ success: false, message: 'ไม่พบกิจกรรม' });
 
-        const { rows: sessionRows } = await query(
-            `SELECT id, status, opened_at, closed_at, opened_by
-             FROM nbu_sessions WHERE activity_id = $1 ORDER BY opened_at DESC LIMIT 1`,
-            [req.params.id]
-        );
-        return res.json({ success: true, data: { ...rows[0], current_session: sessionRows[0] || null } });
+        const [sessionRes, targetRes] = await Promise.all([
+            query(`SELECT id, status, opened_at, closed_at, opened_by
+                   FROM nbu_sessions WHERE activity_id = $1 ORDER BY opened_at DESC LIMIT 1`,
+                [req.params.id]),
+            query(`SELECT id, faculty, year FROM nbu_activity_targets WHERE activity_id = $1 ORDER BY id`,
+                [req.params.id]),
+        ]);
+        return res.json({ success: true, data: {
+            ...rows[0],
+            current_session: sessionRes.rows[0] || null,
+            targets: targetRes.rows,
+        }});
     } catch (err) {
         console.error('GET activity error:', err);
         return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
@@ -75,7 +81,7 @@ router.get('/:id', async (req, res) => {
 // ─── POST /api/v1/activities ──────────────────────────────────────────────────
 router.post('/', async (req, res) => {
     if (!isAdmin(req.user.role)) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์' });
-    const { title, description, location, activity_type, start_datetime, end_datetime, max_participants, staff_ids } = req.body;
+    const { title, description, location, activity_type, start_datetime, end_datetime, max_participants, staff_ids, targets } = req.body;
     if (!title || !start_datetime || !end_datetime)
         return res.status(400).json({ success: false, message: 'กรุณากรอก title, start_datetime, end_datetime' });
 
@@ -96,6 +102,14 @@ router.post('/', async (req, res) => {
                     );
                 }
             }
+            if (Array.isArray(targets) && targets.length > 0) {
+                for (const t of targets) {
+                    await client.query(
+                        `INSERT INTO nbu_activity_targets (activity_id, faculty, year) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+                        [activity.id, t.faculty || null, t.year || null]
+                    );
+                }
+            }
             return activity;
         });
         return res.status(201).json({ success: true, data: result });
@@ -108,7 +122,7 @@ router.post('/', async (req, res) => {
 // ─── PUT /api/v1/activities/:id ───────────────────────────────────────────────
 router.put('/:id', async (req, res) => {
     if (!isAdmin(req.user.role)) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์' });
-    const { title, description, location, activity_type, start_datetime, end_datetime, max_participants, is_active, staff_ids } = req.body;
+    const { title, description, location, activity_type, start_datetime, end_datetime, max_participants, is_active, staff_ids, targets } = req.body;
     try {
         const { rows } = await query(
             `UPDATE nbu_activities SET
@@ -127,6 +141,15 @@ router.put('/:id', async (req, res) => {
                 await query(
                     'INSERT INTO nbu_activity_staff (activity_id, user_id) VALUES ($1,$2) ON CONFLICT DO NOTHING',
                     [req.params.id, uid]
+                );
+            }
+        }
+        if (Array.isArray(targets)) {
+            await query('DELETE FROM nbu_activity_targets WHERE activity_id = $1', [req.params.id]);
+            for (const t of targets) {
+                await query(
+                    `INSERT INTO nbu_activity_targets (activity_id, faculty, year) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+                    [req.params.id, t.faculty || null, t.year || null]
                 );
             }
         }
@@ -236,6 +259,42 @@ router.post('/:id/staff', async (req, res) => {
         );
         return res.json({ success: true, message: 'มอบหมาย staff สำเร็จ' });
     } catch (err) {
+        return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
+    }
+});
+
+// ─── POST /api/v1/activities/targets/preview ─────────────────────────────────
+// นับจำนวนนักศึกษาตามกลุ่มเป้าหมายที่กำหนด (ก่อนบันทึก)
+router.post('/targets/preview', async (req, res) => {
+    if (!isAdmin(req.user.role)) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์' });
+    const { targets } = req.body;
+    if (!Array.isArray(targets) || targets.length === 0) {
+        return res.json({ success: true, count: 0 });
+    }
+    try {
+        // สร้าง WHERE clause สำหรับแต่ละ target (union conditions)
+        const conditions = targets.map((t, i) => {
+            const fac = t.faculty ? `s.faculty = $${i * 2 + 1}` : 'TRUE';
+            const yr  = t.year    ? `s.year = $${i * 2 + 2}`    : 'TRUE';
+            return `(${fac} AND ${yr})`;
+        });
+        const params = targets.flatMap(t => [t.faculty || null, t.year || null]);
+        // ใช้ตัวกรอง NULL ออกจาก params
+        const validParams = [];
+        const validConditions = targets.map(t => {
+            const parts = [];
+            if (t.faculty) { validParams.push(t.faculty); parts.push(`s.faculty = $${validParams.length}`); }
+            if (t.year)    { validParams.push(t.year);    parts.push(`s.year = $${validParams.length}`); }
+            return parts.length ? `(${parts.join(' AND ')})` : 'TRUE';
+        });
+        const whereClause = validConditions.map((c, i) => c).join(' OR ');
+        const { rows } = await query(
+            `SELECT COUNT(DISTINCT s.student_id) AS count FROM nbu_students s WHERE ${whereClause}`,
+            validParams
+        );
+        return res.json({ success: true, count: parseInt(rows[0]?.count || 0) });
+    } catch (err) {
+        console.error('Target preview error:', err);
         return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
     }
 });
