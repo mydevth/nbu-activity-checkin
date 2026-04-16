@@ -242,7 +242,7 @@ footer strong { color:rgba(255,255,255,0.35); }
     <div class="logo-ring"><i class="fa-solid fa-chart-bar"></i></div>
     <div class="header-text">
       <h1 id="page-title">รายงานกิจกรรม</h1>
-      <p>มหาวิทยาลัยนอร์ทกรุงเทพ — สถิติการเข้าร่วม (ข้อมูลสาธารณะ)</p>
+      <p>มหาวิทยาลัยนอร์ทกรุงเทพ</p>
     </div>
   </div>
 
@@ -281,7 +281,8 @@ footer strong { color:rgba(255,255,255,0.35); }
 <div class="toast" id="toast"></div>
 
 <footer>
-  <strong>NBU Activity Check-in System</strong> &nbsp;·&nbsp; มหาวิทยาลัยนอร์ทกรุงเทพ
+  <strong>NBU Activity Check-in System</strong> &nbsp;·&nbsp; สำนักเทคโนโลยีสารสนเทศ<br>
+  มหาวิทยาลัยนอร์ทกรุงเทพ
 </footer>
 
 <script>
@@ -441,7 +442,7 @@ function renderDetail(data, silent = false) {
     <div class="stat-box" style="background:linear-gradient(135deg,rgba(0,119,255,0.08),rgba(0,198,255,0.05));border-color:rgba(0,119,255,0.25);grid-column:1/-1">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">เป้าหมาย / เข้าร่วม</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">เข้าร่วม / จำนวนทั้งหมด</div>
           <div style="font-size:28px;font-weight:800;color:#fff;line-height:1">
             ${Number(total).toLocaleString()}
             <span style="font-size:16px;color:var(--muted)"> / ${Number(target_count).toLocaleString()} คน</span>
@@ -457,18 +458,11 @@ function renderDetail(data, silent = false) {
         </div>
       </div>
     </div>` : ''}
+    ${!target_count ? `
     <div class="stat-box">
       <div class="stat-num">${Number(total).toLocaleString()}</div>
       <div class="stat-lbl">ผู้เข้าร่วมทั้งหมด (คน)</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num">${by_faculty.length}</div>
-      <div class="stat-lbl">คณะที่เข้าร่วม</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num">${majorCount}</div>
-      <div class="stat-lbl">สาขาที่เข้าร่วม</div>
-    </div>
+    </div>` : ''}
   `;
 
   // Faculty bar chart
@@ -521,7 +515,7 @@ function renderFacultyChart(byFac, byTgt = []) {
 
   const datasets = hasTarget ? [
     {
-      label: 'เป้าหมาย',
+      label: 'จำนวนทั้งหมด',
       data: allFac.map(f => tgtMap[f] || 0),
       backgroundColor: 'rgba(148,163,184,0.25)',
       borderColor: 'rgba(148,163,184,0.5)',
@@ -555,7 +549,7 @@ function renderFacultyChart(byFac, byTgt = []) {
           label: c => {
             if (!hasTarget) return ` ${c.raw.toLocaleString()} คน`;
             const fac = allFac[c.dataIndex];
-            if (c.dataset.label === 'เป้าหมาย') return ` เป้าหมาย ${(tgtMap[fac]||0).toLocaleString()} คน`;
+            if (c.dataset.label === 'จำนวนทั้งหมด') return ` จำนวนทั้งหมด ${(tgtMap[fac]||0).toLocaleString()} คน`;
             const t = tgtMap[fac] || 0;
             const p = t > 0 ? Math.round((attMap[fac]||0) / t * 100) : null;
             return ` เข้าร่วม ${(attMap[fac]||0).toLocaleString()} คน${p !== null ? ` (${p}%)` : ''}`;
@@ -665,9 +659,6 @@ function renderMajorAccordion(byFaculty, byMajor, byTgtFac = [], byTgtMaj = []) 
     });
   });
 
-  // Auto-open first faculty
-  const first = container.querySelector('.fac-group-header');
-  if (first) first.click();
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────

@@ -173,10 +173,13 @@ sudo pm2 logs nbu-activity --lines 100
 
 | Role | สิทธิ์ |
 | ---- | ------ |
-| superadmin | ทุกอย่าง รวมถึงสร้าง admin |
-| admin | สร้าง/แก้ไขกิจกรรม, จัดการ staff, Import นักศึกษา |
-| staff | เปิด/ปิด session เช็คชื่อ, ดู report เฉพาะกิจกรรมตัวเอง |
-| dean | Login หน้า Stats ดูสถิติเฉพาะคณะตัวเอง |
+| superadmin | ทุกอย่าง รวมถึงสร้าง admin/superadmin |
+| admin | สร้าง/แก้ไขกิจกรรม, จัดการ staff, Import นักศึกษา (สร้าง superadmin ไม่ได้) |
+| staff | เปิด/ปิด session เช็คชื่อ, ดู report เฉพาะกิจกรรมที่ได้รับมอบหมาย |
+| dean | Login หน้า Stats เท่านั้น — ดูสถิติเฉพาะคณะตัวเอง (`faculty_scope`) |
+| manager | Login หน้า Stats เท่านั้น — ดูสถิติและ export ได้ทุกคณะ ไม่ต้องระบุ `faculty_scope` |
+
+**หมายเหตุ:** Dean และ Manager เข้าได้เฉพาะ `https://activity.northbkk.ac.th/stats` ไม่มีสิทธิ์ใน Admin panel
 
 ---
 

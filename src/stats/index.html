@@ -47,6 +47,7 @@ header {
 .role-superadmin { background: #7c3aed; color: #fff; }
 .role-admin      { background: var(--blue-light); color: #fff; }
 .role-dean       { background: var(--yellow); color: #1a1000; }
+.role-manager    { background: #0d9488; color: #fff; }
 .dean-scope {
   font-size: 10px; background: rgba(245,158,11,0.15);
   border: 1px solid var(--yellow); color: var(--yellow);
@@ -445,7 +446,7 @@ async function doLogin() {
   try {
     const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
     if (!data.success) { errEl.textContent = data.message; return; }
-    if (!['superadmin', 'admin', 'dean'].includes(data.user.role)) {
+    if (!['superadmin', 'admin', 'dean', 'manager'].includes(data.user.role)) {
       errEl.textContent = 'ไม่มีสิทธิ์เข้าถึงหน้านี้'; return;
     }
     token = data.token;
@@ -571,7 +572,7 @@ function renderDashboard() {
   ]);
 
   const dateStr = new Date(d.activity.start_datetime)
-    .toLocaleString('th-TH', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    .toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' });
 
   document.getElementById('main-content').innerHTML = `
     <div class="activity-titlebar">
@@ -584,6 +585,14 @@ function renderDashboard() {
         </div>
       </div>
       <div class="titlebar-right">
+        ${hasTarget && absent > 0 ? `
+        <button class="btn-export" onclick="exportAbsentCSV()" style="background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.35);color:#f87171" title="Export รายชื่อที่ยังไม่มา">
+          <i class="fa-solid fa-user-xmark"></i> ขาด ${Number(absent).toLocaleString()} คน
+        </button>` : ''}
+        ${hasTarget && (d.non_target_attended||[]).length > 0 ? `
+        <button class="btn-export" onclick="exportNonTargetCSV()" style="background:rgba(245,158,11,0.12);border-color:rgba(245,158,11,0.35);color:#f59e0b" title="Export ผู้เข้าร่วมที่ไม่อยู่ในกลุ่มเป้าหมาย">
+          <i class="fa-solid fa-user-tag"></i> นอกกลุ่ม ${(d.non_target_attended||[]).length.toLocaleString()} คน
+        </button>` : ''}
         <button class="btn-export" onclick="exportCSV()">
           <i class="fa-solid fa-file-csv"></i> Export
         </button>
@@ -595,7 +604,7 @@ function renderDashboard() {
     <div class="stat-box" style="background:linear-gradient(135deg,rgba(0,119,255,0.08),rgba(0,198,255,0.05));border-color:rgba(0,119,255,0.25);text-align:left;padding:18px 20px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div style="flex:1;min-width:180px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">เป้าหมาย / เข้าร่วม</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">เข้าร่วม / จำนวนทั้งหมด</div>
           <div style="font-size:28px;font-weight:800;color:#fff;line-height:1">
             ${Number(d.total).toLocaleString()}
             <span style="font-size:16px;color:var(--muted)"> / ${Number(d.target_count).toLocaleString()} คน</span>
@@ -620,7 +629,7 @@ function renderDashboard() {
       ${hasTarget ? `
       <div class="stat-box">
         <div class="stat-num">${Number(d.target_count).toLocaleString()}</div>
-        <div class="stat-lbl">กลุ่มเป้าหมาย (คน)</div>
+        <div class="stat-lbl">กลุ่มจำนวนทั้งหมด (คน)</div>
       </div>
       <div class="stat-box">
         <div class="stat-num" style="color:#00c6ff">${rate}%</div>
@@ -762,7 +771,7 @@ function buildFacultyTable(d) {
   const thead = hasTarget ? `
     <tr style="background:#f3f4f6">
       <th style="padding:7px 10px;text-align:left;color:#6b7280;font-size:12px;font-weight:600">คณะ / สาขา</th>
-      <th style="padding:7px 10px;text-align:right;color:#6b7280;font-size:12px;font-weight:600">เป้าหมาย</th>
+      <th style="padding:7px 10px;text-align:right;color:#6b7280;font-size:12px;font-weight:600">จำนวนทั้งหมด</th>
       <th style="padding:7px 10px;text-align:right;color:#6b7280;font-size:12px;font-weight:600">เข้าร่วม</th>
       <th style="padding:7px 10px;text-align:right;color:#6b7280;font-size:12px;font-weight:600">ขาด</th>
       <th style="padding:7px 14px 7px 4px;color:#6b7280;font-size:12px;font-weight:600;min-width:80px">%</th>
@@ -778,7 +787,7 @@ function buildFacultyTable(d) {
       <span class="chart-title-text">
         <i class="fa-solid fa-table" style="margin-right:6px"></i>
         แยกตามคณะ / สาขา
-        ${hasTarget ? '<span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px">เป้าหมาย · เข้าร่วม · ขาด · %</span>' : ''}
+        ${hasTarget ? '<span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px">จำนวนทั้งหมด · เข้าร่วม · ขาด · %</span>' : ''}
       </span>
     </div>
     <div style="overflow-x:auto">
@@ -801,7 +810,7 @@ function renderFacultyChart(byFac, byTgt = []) {
 
   const datasets = hasTarget ? [
     {
-      label: 'เป้าหมาย',
+      label: 'จำนวนทั้งหมด',
       data: allFac.map(f => tgtMap[f] || 0),
       backgroundColor: 'rgba(148,163,184,0.25)',
       borderColor: 'rgba(148,163,184,0.5)',
@@ -835,7 +844,7 @@ function renderFacultyChart(byFac, byTgt = []) {
           label: c => {
             if (!hasTarget) return ` ${c.raw.toLocaleString()} คน`;
             const fac = allFac[c.dataIndex];
-            if (c.dataset.label === 'เป้าหมาย') return ` เป้าหมาย ${(tgtMap[fac]||0).toLocaleString()} คน`;
+            if (c.dataset.label === 'จำนวนทั้งหมด') return ` จำนวนทั้งหมด ${(tgtMap[fac]||0).toLocaleString()} คน`;
             const t = tgtMap[fac] || 0;
             const p = t > 0 ? Math.round((attMap[fac]||0) / t * 100) : null;
             return ` เข้าร่วม ${(attMap[fac]||0).toLocaleString()} คน${p !== null ? ` (${p}%)` : ''}`;
@@ -943,7 +952,7 @@ function exportCSV() {
     ['วันที่', csvEsc(dateStr)].join(','),
     ['สถานที่', csvEsc(d.activity.location || '-')].join(','),
     ['เข้าร่วม', d.total + ' คน'].join(','),
-    ...(d.target_count > 0 ? [['เป้าหมาย', d.target_count + ' คน'].join(',')] : []),
+    ...(d.target_count > 0 ? [['จำนวนทั้งหมด', d.target_count + ' คน'].join(',')] : []),
     '',
     ['#', 'รหัสนักศึกษา', 'ชื่อ-นามสกุล', 'คณะ', 'สาขา', 'รุ่น', 'สถานะการเข้าร่วม'].join(','),
   ];
@@ -954,7 +963,7 @@ function exportCSV() {
 
   let rows = [];
   if (hasTargets) {
-    // มีกลุ่มเป้าหมาย → รวมทั้งสองกลุ่มเรียงตามคณะ/สาขา/รหัส
+    // มีกลุ่มจำนวนทั้งหมด → รวมทั้งสองกลุ่มเรียงตามคณะ/สาขา/รหัส
     const allRows = [
       ...attended.map(s => ({ ...s, status: 'เข้าร่วม' })),
       ...absent.map(s   => ({ ...s, status: 'ขาด' })),
@@ -963,7 +972,7 @@ function exportCSV() {
       [i+1, s.student_id, csvEsc(s.full_name), csvEsc(s.faculty||''), csvEsc(s.major||''), s.cohort||'', s.status].join(',')
     );
   } else {
-    // ไม่มีกลุ่มเป้าหมาย → แสดงเฉพาะคนที่มาทั้งหมด
+    // ไม่มีกลุ่มจำนวนทั้งหมด → แสดงเฉพาะคนที่มาทั้งหมด
     rows = attended.map((s, i) =>
       [i+1, s.student_id, csvEsc(s.full_name), csvEsc(s.faculty||''), csvEsc(s.major||''), s.cohort||'', 'เข้าร่วม'].join(',')
     );
@@ -974,6 +983,68 @@ function exportCSV() {
   const a    = document.createElement('a');
   a.href = url;
   a.download = `รายงาน_${d.activity.title.replace(/[^\u0E00-\u0E7Fa-zA-Z0-9]/g,'_').slice(0,40)}_${Date.now()}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── Export CSV — รายชื่อขาด (กลุ่มเป้าหมายที่ยังไม่มา) ──────────────────────────
+function exportAbsentCSV() {
+  if (!statsData) return;
+  const d = statsData;
+  const absent = d.absent || [];
+  if (!absent.length) return;
+  const csvEsc = v => { const s = String(v ?? ''); return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s; };
+  const dateStr = new Date(d.activity.start_datetime).toLocaleString('th-TH');
+
+  const header = [
+    ['กิจกรรม', csvEsc(d.activity.title)].join(','),
+    ['วันที่', csvEsc(dateStr)].join(','),
+    ['สถานที่', csvEsc(d.activity.location || '-')].join(','),
+    ['รายชื่อที่ยังไม่เข้าร่วม', absent.length + ' คน'].join(','),
+    '',
+    ['#', 'รหัสนักศึกษา', 'ชื่อ-นามสกุล', 'คณะ', 'สาขา', 'รุ่น'].join(','),
+  ];
+
+  const rows = absent.map((s, i) =>
+    [i+1, s.student_id, csvEsc(s.full_name), csvEsc(s.faculty||''), csvEsc(s.major||''), s.cohort||''].join(',')
+  );
+
+  const blob = new Blob(['\uFEFF' + [...header, ...rows].join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `ขาด_${d.activity.title.replace(/[^\u0E00-\u0E7Fa-zA-Z0-9]/g,'_').slice(0,40)}_${Date.now()}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── Export CSV — ผู้เข้าร่วมที่ไม่อยู่ในกลุ่มเป้าหมาย ──────────────────────────
+function exportNonTargetCSV() {
+  if (!statsData) return;
+  const d = statsData;
+  const list = d.non_target_attended || [];
+  if (!list.length) return;
+  const csvEsc = v => { const s = String(v ?? ''); return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s; };
+  const dateStr = new Date(d.activity.start_datetime).toLocaleString('th-TH');
+
+  const header = [
+    ['กิจกรรม', csvEsc(d.activity.title)].join(','),
+    ['วันที่', csvEsc(dateStr)].join(','),
+    ['สถานที่', csvEsc(d.activity.location || '-')].join(','),
+    ['ผู้เข้าร่วมที่ไม่อยู่ในกลุ่มเป้าหมาย', list.length + ' คน'].join(','),
+    '',
+    ['#', 'รหัสนักศึกษา', 'ชื่อ-นามสกุล', 'คณะ', 'สาขา', 'รุ่น'].join(','),
+  ];
+
+  const rows = list.map((s, i) =>
+    [i+1, s.student_id, csvEsc(s.full_name), csvEsc(s.faculty||''), csvEsc(s.major||''), s.cohort||''].join(',')
+  );
+
+  const blob = new Blob(['\uFEFF' + [...header, ...rows].join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `นอกกลุ่ม_${d.activity.title.replace(/[^\u0E00-\u0E7Fa-zA-Z0-9]/g,'_').slice(0,40)}_${Date.now()}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
@@ -998,7 +1069,7 @@ document.getElementById('l-pass').addEventListener('keydown', e => { if (e.key =
   if (!token) return;
   try {
     const payload = decodeJWT(token);
-    if (!['superadmin', 'admin', 'dean'].includes(payload.role)) {
+    if (!['superadmin', 'admin', 'dean', 'manager'].includes(payload.role)) {
       localStorage.removeItem('admin_token'); return;
     }
     const data = await api('/stats/activities');

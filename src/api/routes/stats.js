@@ -7,7 +7,7 @@ const router = Router();
 router.use(verifyJWT);
 
 function canAccess(role) {
-    return ['superadmin', 'admin', 'dean'].includes(role);
+    return ['superadmin', 'admin', 'dean', 'manager'].includes(role);
 }
 
 // ─── GET /api/v1/stats/activities ─────────────────────────────────────────────
@@ -103,7 +103,7 @@ router.get('/:activityId', async (req, res) => {
         const tgt = buildTargetWhere('s');
 
         const [totalRes, byFacultyRes, byFacultyMajorRes, recentRes, targetCountRes, absentRes,
-               attendedRes, tgtByFacultyRes, tgtByMajorRes] = await Promise.all([
+               attendedRes, tgtByFacultyRes, tgtByMajorRes, nonTargetRes] = await Promise.all([
             // รวมทั้งหมด
             scope
                 ? query(`SELECT COUNT(*) AS c FROM nbu_attendance att
@@ -196,10 +196,24 @@ router.get('/:activityId', async (req, res) => {
                     GROUP BY s.faculty, s.major ORDER BY s.faculty, s.major
                   `)
                 : Promise.resolve({ rows: [] }),
+
+            // รายชื่อผู้เข้าร่วมที่ไม่อยู่ในกลุ่มเป้าหมาย
+            hasTargets
+                ? query(`
+                    SELECT s.student_id, s.full_name, s.faculty, s.major,
+                           SUBSTRING(s.student_id, 1, 2) AS cohort
+                    FROM nbu_attendance att
+                    JOIN nbu_students s ON s.student_id = att.student_id
+                    WHERE att.activity_id = $1 ${filt}
+                    AND NOT (${tgt.clause})
+                    ORDER BY s.faculty, s.major, s.student_id
+                  `, p2)
+                : Promise.resolve({ rows: [] }),
         ]);
 
         const target_count = parseInt(targetCountRes.rows[0]?.c || 0);
         const attended     = parseInt(totalRes.rows[0]?.c || 0);
+
 
         return res.json({
             success: true,
@@ -215,6 +229,7 @@ router.get('/:activityId', async (req, res) => {
                 tgt_by_major:     tgtByMajorRes.rows,
                 recent:           recentRes.rows,
                 absent:           absentRes.rows,
+                non_target_attended: nonTargetRes.rows,
                 targets:          targetRows,
                 has_explicit_list: hasExplicitList,
                 explicit_list_count: hasExplicitList ? targetStudentsRes.rows.length : 0,
