@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Report กิจกรรมหลักและย่อย</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; font-size: 14px; }
+
+  .sidebar { width: 220px; background: #1a2332; position: fixed; top: 0; left: 0; height: 100vh; padding: 20px 0; }
+  .sidebar .logo { color: #fff; font-size: 16px; font-weight: 700; padding: 0 20px 20px; border-bottom: 1px solid #2d3f55; }
+  .sidebar .logo span { color: #4dabf7; }
+  .sidebar nav a { display: block; padding: 10px 20px; color: #8fa3b8; text-decoration: none; font-size: 13px; transition: all .2s; }
+  .sidebar nav a:hover, .sidebar nav a.active { background: #2d3f55; color: #fff; border-left: 3px solid #4dabf7; }
+  .sidebar nav .section { padding: 14px 20px 6px; font-size: 11px; color: #4a6278; text-transform: uppercase; letter-spacing: 1px; }
+
+  .main { margin-left: 220px; padding: 24px; }
+
+  .breadcrumb { font-size: 13px; color: #888; margin-bottom: 16px; }
+  .breadcrumb a { color: #4dabf7; text-decoration: none; }
+  .breadcrumb span { margin: 0 6px; }
+
+  .page-header { background: #fff; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); display: flex; justify-content: space-between; align-items: center; }
+  .page-header h1 { font-size: 20px; font-weight: 700; }
+  .page-header .meta { font-size: 13px; color: #888; margin-top: 4px; }
+
+  .btn { padding: 8px 16px; border-radius: 7px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all .2s; }
+  .btn-primary { background: #4dabf7; color: #fff; }
+  .btn-success { background: #2f9e44; color: #fff; }
+  .btn-ghost { background: #fff; color: #555; border: 1px solid #dee2e6; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-group { display: flex; gap: 8px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; background: #fff; border-radius: 10px; padding: 6px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .tab { padding: 8px 20px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 500; color: #666; border: none; background: none; }
+  .tab.active { background: #4dabf7; color: #fff; }
+
+  /* Summary Cards */
+  .cards-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; margin-bottom: 20px; }
+  .stat-card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); border-top: 3px solid transparent; }
+  .stat-card.blue { border-color: #4dabf7; }
+  .stat-card.green { border-color: #2f9e44; }
+  .stat-card.orange { border-color: #e67700; }
+  .stat-card.red { border-color: #e03131; }
+  .stat-card.purple { border-color: #7950f2; }
+  .stat-card .label { font-size: 11px; color: #888; margin-bottom: 6px; }
+  .stat-card .value { font-size: 26px; font-weight: 700; color: #1a2332; }
+  .stat-card.blue .value { color: #4dabf7; }
+  .stat-card.green .value { color: #2f9e44; }
+  .stat-card.orange .value { color: #e67700; }
+  .stat-card.red .value { color: #e03131; }
+  .stat-card.purple .value { color: #7950f2; }
+  .stat-card .sub { font-size: 12px; color: #aaa; margin-top: 2px; }
+
+  /* Section card */
+  .section-card { background: #fff; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 20px; }
+  .section-card h2 { font-size: 15px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+
+  /* Sub-activity report tabs */
+  .sub-tabs { display: flex; gap: 0; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+  .sub-tab { padding: 8px 16px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: #fff; color: #666; border-right: 1px solid #dee2e6; flex: 1; text-align: center; transition: all .2s; }
+  .sub-tab:last-child { border-right: none; }
+  .sub-tab.active { background: #4dabf7; color: #fff; }
+  .sub-tab .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; }
+  .dot-green { background: #2f9e44; }
+  .dot-orange { background: #e67700; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f8f9fa; padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #666; border-bottom: 2px solid #e9ecef; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f1f3f5; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8f9fa; }
+  .check-yes { color: #2f9e44; font-weight: 600; }
+  .check-no { color: #dee2e6; }
+  .check-partial { color: #e67700; }
+
+  /* Progress bar inline */
+  .prog { display: flex; align-items: center; gap: 8px; }
+  .prog-bar { flex: 1; height: 6px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 4px; }
+  .prog-fill.green { background: #2f9e44; }
+  .prog-fill.blue { background: #4dabf7; }
+  .prog-fill.orange { background: #e67700; }
+  .prog-pct { font-size: 12px; font-weight: 600; color: #555; width: 38px; text-align: right; }
+
+  /* Faculty breakdown */
+  .faculty-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .faculty-row { display: flex; flex-direction: column; gap: 4px; }
+  .faculty-name { font-size: 12px; font-weight: 600; color: #555; }
+  .faculty-subs { display: flex; gap: 6px; }
+  .faculty-sub-bar { flex: 1; }
+  .faculty-sub-label { font-size: 10px; color: #888; }
+
+  /* Heatmap */
+  .heatmap { display: grid; grid-template-columns: 160px repeat(2, 1fr) 80px; gap: 0; }
+  .hm-header { font-size: 11px; font-weight: 700; color: #888; padding: 8px 12px; background: #f8f9fa; border-bottom: 2px solid #e9ecef; }
+  .hm-row { display: contents; }
+  .hm-cell { padding: 8px 12px; border-bottom: 1px solid #f1f3f5; font-size: 13px; display: flex; align-items: center; }
+  .hm-name { font-weight: 500; }
+  .hm-dot { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 700; flex-shrink: 0; }
+  .hm-both { background: #2f9e44; }
+  .hm-one { background: #f59f00; }
+  .hm-none { background: #dee2e6; color: #999; }
+  .hm-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .hm-tag-both { background: #d3f9d8; color: #2f9e44; }
+  .hm-tag-one { background: #fff3bf; color: #e67700; }
+  .hm-tag-none { background: #f1f3f5; color: #868e96; }
+
+  /* Export section */
+  .export-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .export-btn { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 8px; border: 1px solid #dee2e6; background: #fff; cursor: pointer; font-size: 13px; transition: all .2s; }
+  .export-btn:hover { border-color: #4dabf7; color: #4dabf7; background: #f0f8ff; }
+  .export-icon { font-size: 18px; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-blue { background: #e7f5ff; color: #4dabf7; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="logo">NBU <span>Activity</span></div>
+  <nav>
+    <div class="section">หลัก</div>
+    <a href="#">📊 Dashboard</a>
+    <a href="#">🎯 กิจกรรม</a>
+    <a href="#">👥 ผู้ใช้งาน</a>
+    <div class="section">รายงาน</div>
+    <a href="#" class="active">📈 สถิติ</a>
+    <a href="#">📥 นำเข้าข้อมูล</a>
+  </nav>
+</div>
+
+<div class="main">
+
+  <div class="breadcrumb">
+    <a href="#">กิจกรรม</a><span>›</span>
+    <a href="#">กิจกรรมปฐมนิเทศนักศึกษาใหม่ 2568</a><span>›</span>
+    <strong>รายงาน</strong>
+  </div>
+
+  <div class="page-header">
+    <div>
+      <h1>📊 รายงาน — กิจกรรมปฐมนิเทศนักศึกษาใหม่ ปีการศึกษา 2568</h1>
+      <div class="meta">📅 1 สิงหาคม 2568 &nbsp;|&nbsp; 📍 อาคารเฉลิมพระเกียรติ &nbsp;|&nbsp; 2 กิจกรรมย่อย</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-ghost">🖨️ พิมพ์</button>
+      <button class="btn btn-success">📥 Export Excel</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active">📋 ภาพรวมกิจกรรมหลัก</button>
+    <button class="tab">① กิจกรรมย่อยที่ 1</button>
+    <button class="tab">② กิจกรรมย่อยที่ 2</button>
+    <button class="tab">👥 รายชื่อนักศึกษา</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- TAB: ภาพรวมกิจกรรมหลัก -->
+
+  <!-- Summary Cards -->
+  <div class="cards-row">
+    <div class="stat-card blue">
+      <div class="label">เป้าหมาย</div>
+      <div class="value">450</div>
+      <div class="sub">นักศึกษาทั้งหมด</div>
+    </div>
+    <div class="stat-card green">
+      <div class="label">เข้าร่วม (unique)</div>
+      <div class="value">324</div>
+      <div class="sub">72.0% ของเป้าหมาย</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="label">เข้าครบทุก session</div>
+      <div class="value">287</div>
+      <div class="sub">63.8% ของเป้าหมาย</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="label">เข้าบางส่วน</div>
+      <div class="value">37</div>
+      <div class="sub">ขาดอย่างน้อย 1 กิจกรรมย่อย</div>
+    </div>
+    <div class="stat-card red">
+      <div class="label">ไม่เข้าเลย</div>
+      <div class="value">126</div>
+      <div class="sub">28.0% ของเป้าหมาย</div>
+    </div>
+  </div>
+
+  <!-- Comparison by sub-activity -->
+  <div class="section-card">
+    <h2>
+      เปรียบเทียบจำนวนเข้าร่วมแต่ละกิจกรรมย่อย
+      <span class="badge badge-blue">2 กิจกรรมย่อย</span>
+    </h2>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+      <!-- Sub 1 -->
+      <div style="background:#f8f9fa;border-radius:10px;padding:16px;border-left:4px solid #4dabf7;">
+        <div style="font-size:12px;color:#888;margin-bottom:6px;">① ปฐมนิเทศรวม — ช่วงเช้า</div>
+        <div style="font-size:28px;font-weight:700;color:#1a2332;">312 <span style="font-size:14px;color:#888;">คน</span></div>
+        <div class="prog" style="margin-top:8px;">
+          <div class="prog-bar"><div class="prog-fill green" style="width:69.3%"></div></div>
+          <div class="prog-pct">69.3%</div>
+        </div>
+        <div style="font-size:11px;color:#888;margin-top:4px;">QR: 298 &nbsp;|&nbsp; Manual: 14</div>
+      </div>
+      <!-- Sub 2 -->
+      <div style="background:#f8f9fa;border-radius:10px;padding:16px;border-left:4px solid #2f9e44;">
+        <div style="font-size:12px;color:#888;margin-bottom:6px;">② ปฐมนิเทศแยกคณะ — ช่วงบ่าย</div>
+        <div style="font-size:28px;font-weight:700;color:#1a2332;">287 <span style="font-size:14px;color:#888;">คน</span></div>
+        <div class="prog" style="margin-top:8px;">
+          <div class="prog-bar"><div class="prog-fill blue" style="width:63.8%"></div></div>
+          <div class="prog-pct">63.8%</div>
+        </div>
+        <div style="font-size:11px;color:#888;margin-top:4px;">QR: 271 &nbsp;|&nbsp; Manual: 16</div>
+      </div>
+    </div>
+
+    <!-- Faculty breakdown -->
+    <h2 style="margin-bottom:12px;font-size:14px;">จำแนกตามคณะ (เปรียบเทียบแต่ละกิจกรรมย่อย)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>คณะ</th>
+          <th>เป้าหมาย</th>
+          <th>① ช่วงเช้า</th>
+          <th>② ช่วงบ่าย</th>
+          <th>เข้าครบ</th>
+          <th>%ครบ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>บริหารธุรกิจ</strong></td>
+          <td>120</td>
+          <td><span class="check-yes">92</span></td>
+          <td><span class="check-yes">85</span></td>
+          <td><strong style="color:#7950f2">80</strong></td>
+          <td>
+            <div class="prog">
+              <div class="prog-bar"><div class="prog-fill green" style="width:66.7%"></div></div>
+              <div class="prog-pct">66.7%</div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>วิศวกรรมศาสตร์</strong></td>
+          <td>95</td>
+          <td><span class="check-yes">78</span></td>
+          <td><span class="check-yes">70</span></td>
+          <td><strong style="color:#7950f2">65</strong></td>
+          <td>
+            <div class="prog">
+              <div class="prog-bar"><div class="prog-fill green" style="width:68.4%"></div></div>
+              <div class="prog-pct">68.4%</div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>นิติศาสตร์</strong></td>
+          <td>80</td>
+          <td><span class="check-yes">62</span></td>
+          <td><span class="check-yes">55</span></td>
+          <td><strong style="color:#7950f2">50</strong></td>
+          <td>
+            <div class="prog">
+              <div class="prog-bar"><div class="prog-fill green" style="width:62.5%"></div></div>
+              <div class="prog-pct">62.5%</div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>บัญชี</strong></td>
+          <td>75</td>
+          <td><span class="check-yes">50</span></td>
+          <td><span class="check-yes">48</span></td>
+          <td><strong style="color:#7950f2">46</strong></td>
+          <td>
+            <div class="prog">
+              <div class="prog-bar"><div class="prog-fill orange" style="width:61.3%"></div></div>
+              <div class="prog-pct">61.3%</div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>รัฐศาสตร์</strong></td>
+          <td>80</td>
+          <td><span class="check-yes">30</span></td>
+          <td><span class="check-yes">29</span></td>
+          <td><strong style="color:#e03131">25</strong></td>
+          <td>
+            <div class="prog">
+              <div class="prog-bar"><div class="prog-fill orange" style="width:31.3%"></div></div>
+              <div class="prog-pct">31.3%</div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Individual attendance matrix -->
+  <div class="section-card">
+    <h2>
+      รายชื่อนักศึกษา — สถานะเข้าร่วมแต่ละกิจกรรมย่อย
+      <div class="btn-group">
+        <button class="btn btn-ghost btn-sm">กรอง: ขาดบางส่วน</button>
+        <button class="btn btn-success btn-sm">📥 Export</button>
+      </div>
+    </h2>
+
+    <!-- Sub-tabs filter -->
+    <div class="sub-tabs">
+      <button class="sub-tab active">ทั้งหมด (450)</button>
+      <button class="sub-tab"><span class="dot dot-green"></span>เข้าครบ (287)</button>
+      <button class="sub-tab"><span class="dot dot-orange"></span>เข้าบางส่วน (37)</button>
+      <button class="sub-tab">ไม่เข้าเลย (126)</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>รหัสนักศึกษา</th>
+          <th>ชื่อ-นามสกุล</th>
+          <th>คณะ / สาขา</th>
+          <th style="text-align:center;">① ช่วงเช้า</th>
+          <th style="text-align:center;">② ช่วงบ่าย</th>
+          <th>สถานะ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="color:#888">1</td>
+          <td>671280108</td>
+          <td><strong>นายสมชาย ใจดี</strong></td>
+          <td>บริหารธุรกิจ — การตลาด</td>
+          <td style="text-align:center;"><span class="check-yes">✅ 09:14</span></td>
+          <td style="text-align:center;"><span class="check-yes">✅ 13:47</span></td>
+          <td><span class="badge" style="background:#d3f9d8;color:#2f9e44;">เข้าครบ</span></td>
+        </tr>
+        <tr>
+          <td style="color:#888">2</td>
+          <td>671280109</td>
+          <td><strong>นางสาวสุดา รักเรียน</strong></td>
+          <td>วิศวกรรมศาสตร์ — คอมพิวเตอร์</td>
+          <td style="text-align:center;"><span class="check-yes">✅ 08:52</span></td>
+          <td style="text-align:center;"><span class="check-yes">✅ 13:46</span></td>
+          <td><span class="badge" style="background:#d3f9d8;color:#2f9e44;">เข้าครบ</span></td>
+        </tr>
+        <tr style="background:#fffbf0;">
+          <td style="color:#888">3</td>
+          <td>671280115</td>
+          <td><strong>นายประยุทธ ขยันดี</strong></td>
+          <td>นิติศาสตร์</td>
+          <td style="text-align:center;"><span class="check-yes">✅ 09:30</span></td>
+          <td style="text-align:center;"><span class="check-no">—</span></td>
+          <td><span class="badge" style="background:#fff3bf;color:#e67700;">ขาดบ่าย</span></td>
+        </tr>
+        <tr style="background:#fffbf0;">
+          <td style="color:#888">4</td>
+          <td>671280122</td>
+          <td><strong>นางสาวมาลี สวยงาม</strong></td>
+          <td>บัญชี</td>
+          <td style="text-align:center;"><span class="check-no">—</span></td>
+          <td style="text-align:center;"><span class="check-yes">✅ 14:05</span></td>
+          <td><span class="badge" style="background:#fff3bf;color:#e67700;">ขาดเช้า</span></td>
+        </tr>
+        <tr style="background:#fff5f5;">
+          <td style="color:#888">5</td>
+          <td>671280130</td>
+          <td><strong>นายวีระ ไม่มา</strong></td>
+          <td>รัฐศาสตร์</td>
+          <td style="text-align:center;"><span class="check-no">—</span></td>
+          <td style="text-align:center;"><span class="check-no">—</span></td>
+          <td><span class="badge" style="background:#ffe3e3;color:#e03131;">ไม่เข้าเลย</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="text-align:center;padding:12px;font-size:12px;color:#888;">
+      แสดง 5 จาก 450 รายการ &nbsp;|&nbsp; <a href="#" style="color:#4dabf7;">ดูทั้งหมด</a>
+    </div>
+  </div>
+
+  <!-- Export Section -->
+  <div class="section-card">
+    <h2>Export รายงาน</h2>
+    <div class="export-row">
+      <button class="export-btn">
+        <span class="export-icon">📊</span>
+        <div>
+          <div style="font-weight:600;">Excel — ภาพรวมกิจกรรมหลัก</div>
+          <div style="font-size:11px;color:#888;">ทุกกิจกรรมย่อยรวมในไฟล์เดียว (หลาย sheet)</div>
+        </div>
+      </button>
+      <button class="export-btn">
+        <span class="export-icon">📄</span>
+        <div>
+          <div style="font-weight:600;">Excel — กิจกรรมย่อยที่ 1 เท่านั้น</div>
+          <div style="font-size:11px;color:#888;">ปฐมนิเทศรวม ช่วงเช้า</div>
+        </div>
+      </button>
+      <button class="export-btn">
+        <span class="export-icon">📄</span>
+        <div>
+          <div style="font-weight:600;">Excel — กิจกรรมย่อยที่ 2 เท่านั้น</div>
+          <div style="font-size:11px;color:#888;">ปฐมนิเทศแยกคณะ ช่วงบ่าย</div>
+        </div>
+      </button>
+      <button class="export-btn">
+        <span class="export-icon">📋</span>
+        <div>
+          <div style="font-weight:600;">CSV — รายชื่อขาดบางกิจกรรมย่อย</div>
+          <div style="font-size:11px;color:#888;">37 คน ที่เข้าไม่ครบ</div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

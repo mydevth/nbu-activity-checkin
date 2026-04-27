@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Scanner เลือกกิจกรรมย่อย</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f1923; color: #fff; font-size: 14px; min-height: 100vh; }
+
+  .scanner-layout { display: grid; grid-template-columns: 340px 1fr; min-height: 100vh; }
+
+  /* Left panel — controls */
+  .left-panel { background: #1a2332; padding: 20px; display: flex; flex-direction: column; gap: 16px; border-right: 1px solid #2d3f55; }
+
+  .logo { font-size: 16px; font-weight: 700; color: #fff; padding-bottom: 16px; border-bottom: 1px solid #2d3f55; }
+  .logo span { color: #4dabf7; }
+
+  .select-label { font-size: 11px; color: #8fa3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+
+  select, input { width: 100%; padding: 10px 12px; background: #0f1923; border: 1px solid #2d3f55; border-radius: 8px; color: #fff; font-size: 13px; }
+  select:focus, input:focus { outline: none; border-color: #4dabf7; }
+  option { background: #1a2332; }
+
+  /* Sub-activity selector */
+  .sub-selector { display: flex; flex-direction: column; gap: 8px; }
+  .sub-option { padding: 12px 14px; border: 2px solid #2d3f55; border-radius: 10px; cursor: pointer; transition: all .2s; }
+  .sub-option:hover { border-color: #4dabf7; background: rgba(77,171,247,.08); }
+  .sub-option.selected { border-color: #4dabf7; background: rgba(77,171,247,.15); }
+  .sub-option .sub-title { font-weight: 600; font-size: 13px; }
+  .sub-option .sub-time { font-size: 11px; color: #8fa3b8; margin-top: 2px; }
+  .sub-option .sub-count { font-size: 11px; color: #4dabf7; margin-top: 4px; font-weight: 600; }
+  .sub-option .sub-badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-left: 6px; }
+  .badge-open { background: rgba(255,224,102,.2); color: #ffe066; }
+  .badge-closed { background: rgba(134,142,150,.2); color: #868e96; }
+
+  /* Session controls */
+  .session-box { background: #0f1923; border-radius: 10px; padding: 14px; border: 1px solid #2d3f55; }
+  .session-box .s-label { font-size: 11px; color: #8fa3b8; margin-bottom: 8px; }
+  .session-box .s-status { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-green { background: #51cf66; box-shadow: 0 0 6px #51cf66; }
+  .dot-gray { background: #868e96; }
+  .btn { padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .2s; width: 100%; }
+  .btn-open { background: #2f9e44; color: #fff; }
+  .btn-open:hover { background: #2b8a3e; }
+  .btn-close { background: #e03131; color: #fff; }
+  .btn-close:hover { background: #c92a2a; }
+  .btn-disabled { background: #2d3f55; color: #8fa3b8; cursor: not-allowed; }
+
+  /* QR input */
+  .qr-box { background: #0f1923; border-radius: 10px; padding: 14px; border: 1px solid #2d3f55; }
+  .qr-input { font-size: 16px; letter-spacing: 2px; text-align: center; }
+  .qr-hint { font-size: 11px; color: #8fa3b8; text-align: center; margin-top: 6px; }
+
+  /* Right panel — result */
+  .right-panel { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* Current sub indicator */
+  .current-sub { background: #1a2332; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; gap: 12px; border: 1px solid #2d3f55; }
+  .sub-num { width: 36px; height: 36px; background: #4dabf7; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+  .sub-now { font-size: 13px; color: #8fa3b8; }
+  .sub-now strong { color: #fff; font-size: 15px; display: block; }
+  .sub-progress { margin-left: auto; text-align: right; }
+  .sub-progress .count { font-size: 24px; font-weight: 700; color: #4dabf7; }
+  .sub-progress .of { font-size: 12px; color: #8fa3b8; }
+
+  /* Result display */
+  .result-card { border-radius: 14px; padding: 24px; text-align: center; transition: all .3s; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  .result-card.success { background: linear-gradient(135deg, #1a3a2a, #0f2a1e); border: 2px solid #2f9e44; }
+  .result-card.duplicate { background: linear-gradient(135deg, #3a2a0f, #2a1a00); border: 2px solid #f59f00; }
+  .result-card.idle { background: #1a2332; border: 2px dashed #2d3f55; }
+
+  .result-photo { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid #2f9e44; }
+  .result-photo.dup { border-color: #f59f00; }
+  .result-name { font-size: 22px; font-weight: 700; }
+  .result-id { font-size: 13px; color: #8fa3b8; }
+  .result-faculty { font-size: 13px; color: #4dabf7; background: rgba(77,171,247,.1); padding: 4px 12px; border-radius: 20px; }
+  .result-status { font-size: 15px; font-weight: 700; }
+  .result-status.ok { color: #51cf66; }
+  .result-status.dup { color: #f59f00; }
+  .result-sub-name { font-size: 12px; color: #8fa3b8; }
+
+  /* Sub attendance comparison */
+  .sub-compare { background: #1a2332; border-radius: 12px; padding: 14px 18px; border: 1px solid #2d3f55; }
+  .sub-compare h3 { font-size: 12px; color: #8fa3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .compare-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1e2c3d; }
+  .compare-row:last-child { border-bottom: none; }
+  .compare-num { width: 22px; height: 22px; background: #2d3f55; color: #8fa3b8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .compare-title { flex: 1; font-size: 12px; }
+  .compare-check { font-size: 16px; }
+  .check-yes { color: #51cf66; }
+  .check-no { color: #868e96; }
+  .check-current { color: #4dabf7; }
+
+  /* Recent list */
+  .recent-list { background: #1a2332; border-radius: 12px; padding: 14px 18px; border: 1px solid #2d3f55; flex: 1; }
+  .recent-list h3 { font-size: 12px; color: #8fa3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; }
+  .recent-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #1e2c3d; }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-avatar { width: 32px; height: 32px; border-radius: 50%; background: #2d3f55; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; overflow: hidden; }
+  .recent-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .recent-info { flex: 1; }
+  .recent-info .name { font-size: 13px; font-weight: 600; }
+  .recent-info .faculty { font-size: 11px; color: #8fa3b8; }
+  .recent-time { font-size: 11px; color: #8fa3b8; }
+  .recent-method { font-size: 10px; background: #2d3f55; color: #8fa3b8; padding: 1px 6px; border-radius: 4px; }
+
+  .idle-icon { font-size: 48px; opacity: .3; }
+  .idle-text { color: #8fa3b8; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="scanner-layout">
+
+  <!-- Left Panel -->
+  <div class="left-panel">
+    <div class="logo">NBU <span>Scanner</span></div>
+
+    <!-- เลือกกิจกรรมหลัก -->
+    <div>
+      <div class="select-label">กิจกรรมหลัก</div>
+      <select>
+        <option>กิจกรรมปฐมนิเทศนักศึกษาใหม่ 2568</option>
+        <option>กีฬาสีมหาวิทยาลัย 2568</option>
+      </select>
+    </div>
+
+    <!-- เลือกกิจกรรมย่อย (ใหม่) -->
+    <div>
+      <div class="select-label">กิจกรรมย่อย — เลือกที่จะสแกน</div>
+      <div class="sub-selector">
+        <div class="sub-option">
+          <div class="sub-title">
+            1. ปฐมนิเทศรวม — ช่วงเช้า
+            <span class="sub-badge badge-closed">● ปิดแล้ว</span>
+          </div>
+          <div class="sub-time">⏰ 08:00 – 12:00 น. | ห้องประชุมใหญ่</div>
+          <div class="sub-count">✅ 312 คนเช็คชื่อแล้ว</div>
+        </div>
+        <div class="sub-option selected">
+          <div class="sub-title">
+            2. ปฐมนิเทศแยกคณะ — ช่วงบ่าย
+            <span class="sub-badge badge-open">● กำลังเปิด</span>
+          </div>
+          <div class="sub-time">⏰ 13:00 – 17:00 น. | แยกตามคณะ</div>
+          <div class="sub-count">✅ 287 คนเช็คชื่อแล้ว</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session -->
+    <div class="session-box">
+      <div class="s-label">Session ปัจจุบัน — กิจกรรมย่อยที่ 2</div>
+      <div class="s-status">
+        <div class="dot dot-green"></div>
+        <span style="font-size:13px;font-weight:600">Session เปิดอยู่</span>
+        <span style="font-size:11px;color:#8fa3b8;margin-left:auto">เปิดเมื่อ 13:02 น.</span>
+      </div>
+      <button class="btn btn-close">■ ปิด Session</button>
+    </div>
+
+    <!-- QR Input -->
+    <div class="qr-box">
+      <div class="select-label">สแกน QR Code</div>
+      <input class="qr-input" type="text" placeholder="รอสแกน..." value="671280108|1775716100|6dd4">
+      <div class="qr-hint">📷 วาง cursor ที่ช่องนี้แล้วสแกน</div>
+    </div>
+
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel">
+
+    <!-- Current sub indicator -->
+    <div class="current-sub">
+      <div class="sub-num">2</div>
+      <div class="sub-now">
+        กำลังสแกนสำหรับ
+        <strong>ปฐมนิเทศแยกคณะ — ช่วงบ่าย</strong>
+      </div>
+      <div class="sub-progress">
+        <div class="count">287</div>
+        <div class="of">/ 450 คน</div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="result-card success">
+      <img class="result-photo" src="https://ui-avatars.com/api/?name=สมชาย+ใจดี&background=2f9e44&color=fff&size=90" alt="photo">
+      <div class="result-name">นายสมชาย ใจดี</div>
+      <div class="result-id">671280108</div>
+      <div class="result-faculty">🎓 คณะบริหารธุรกิจ — การตลาด</div>
+      <div class="result-status ok">✅ เช็คชื่อสำเร็จ</div>
+      <div class="result-sub-name">กิจกรรมย่อย: ปฐมนิเทศแยกคณะ — ช่วงบ่าย</div>
+    </div>
+
+    <!-- Sub-activity attendance comparison (ใหม่) -->
+    <div class="sub-compare">
+      <h3>สถานะเข้าร่วมของ นายสมชาย ใจดี</h3>
+      <div class="compare-row">
+        <div class="compare-num">1</div>
+        <div class="compare-title">ปฐมนิเทศรวม — ช่วงเช้า</div>
+        <span class="compare-check check-yes">✅ เช็คแล้ว 09:14 น.</span>
+      </div>
+      <div class="compare-row">
+        <div class="compare-num">2</div>
+        <div class="compare-title">ปฐมนิเทศแยกคณะ — ช่วงบ่าย</div>
+        <span class="compare-check check-current">🔵 เพิ่งเช็ค 13:47 น.</span>
+      </div>
+    </div>
+
+    <!-- Recent -->
+    <div class="recent-list">
+      <h3>เช็คชื่อล่าสุด <span style="color:#4dabf7">กิจกรรมย่อยที่ 2</span></h3>
+      <div class="recent-item">
+        <div class="recent-avatar"><img src="https://ui-avatars.com/api/?name=สมชาย&background=2d3f55&color=fff&size=32" alt=""></div>
+        <div class="recent-info">
+          <div class="name">นายสมชาย ใจดี</div>
+          <div class="faculty">บริหารธุรกิจ — การตลาด</div>
+        </div>
+        <span class="recent-method">QR</span>
+        <div class="recent-time">13:47</div>
+      </div>
+      <div class="recent-item">
+        <div class="recent-avatar"><img src="https://ui-avatars.com/api/?name=สุดา&background=2d3f55&color=fff&size=32" alt=""></div>
+        <div class="recent-info">
+          <div class="name">นางสาวสุดา รักเรียน</div>
+          <div class="faculty">วิศวกรรมศาสตร์ — คอมพิวเตอร์</div>
+        </div>
+        <span class="recent-method">QR</span>
+        <div class="recent-time">13:46</div>
+      </div>
+      <div class="recent-item">
+        <div class="recent-avatar"><img src="https://ui-avatars.com/api/?name=ประยุทธ&background=2d3f55&color=fff&size=32" alt=""></div>
+        <div class="recent-info">
+          <div class="name">นายประยุทธ ขยันดี</div>
+          <div class="faculty">นิติศาสตร์</div>
+        </div>
+        <span class="recent-method">Manual</span>
+        <div class="recent-time">13:45</div>
+      </div>
+      <div class="recent-item">
+        <div class="recent-avatar"><img src="https://ui-avatars.com/api/?name=มาลี&background=2d3f55&color=fff&size=32" alt=""></div>
+        <div class="recent-info">
+          <div class="name">นางสาวมาลี สวยงาม</div>
+          <div class="faculty">บัญชี</div>
+        </div>
+        <span class="recent-method">QR</span>
+        <div class="recent-time">13:44</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

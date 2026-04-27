@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Admin จัดการกิจกรรมย่อย</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; font-size: 14px; }
+
+  /* Layout */
+  .sidebar { width: 220px; background: #1a2332; position: fixed; top: 0; left: 0; height: 100vh; padding: 20px 0; }
+  .sidebar .logo { color: #fff; font-size: 16px; font-weight: 700; padding: 0 20px 20px; border-bottom: 1px solid #2d3f55; }
+  .sidebar .logo span { color: #4dabf7; }
+  .sidebar nav a { display: block; padding: 10px 20px; color: #8fa3b8; text-decoration: none; font-size: 13px; transition: all .2s; }
+  .sidebar nav a:hover, .sidebar nav a.active { background: #2d3f55; color: #fff; border-left: 3px solid #4dabf7; }
+  .sidebar nav .section { padding: 14px 20px 6px; font-size: 11px; color: #4a6278; text-transform: uppercase; letter-spacing: 1px; }
+
+  .main { margin-left: 220px; padding: 24px; min-height: 100vh; }
+
+  /* Breadcrumb */
+  .breadcrumb { font-size: 13px; color: #888; margin-bottom: 16px; }
+  .breadcrumb a { color: #4dabf7; text-decoration: none; }
+  .breadcrumb span { margin: 0 6px; }
+
+  /* Header */
+  .page-header { background: #fff; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); display: flex; justify-content: space-between; align-items: flex-start; }
+  .page-header h1 { font-size: 20px; font-weight: 700; color: #1a2332; }
+  .page-header .meta { font-size: 13px; color: #888; margin-top: 4px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .badge-active { background: #d3f9d8; color: #2f9e44; }
+  .badge-open { background: #fff3bf; color: #e67700; }
+  .badge-closed { background: #f1f3f5; color: #868e96; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; background: #fff; border-radius: 10px; padding: 6px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .tab { padding: 8px 20px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 500; color: #666; transition: all .2s; border: none; background: none; }
+  .tab.active { background: #4dabf7; color: #fff; }
+  .tab:hover:not(.active) { background: #f0f2f5; }
+
+  /* Cards row */
+  .cards-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+  .stat-card { background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .stat-card .label { font-size: 12px; color: #888; margin-bottom: 6px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; color: #1a2332; }
+  .stat-card .sub { font-size: 12px; color: #aaa; margin-top: 2px; }
+  .stat-card.blue .value { color: #4dabf7; }
+  .stat-card.green .value { color: #2f9e44; }
+  .stat-card.orange .value { color: #e67700; }
+  .stat-card.red .value { color: #e03131; }
+
+  /* Section */
+  .section-card { background: #fff; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 20px; }
+  .section-card h2 { font-size: 15px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .section-card h2 .count { background: #e7f5ff; color: #4dabf7; font-size: 12px; padding: 2px 8px; border-radius: 20px; }
+
+  /* Sub-activity list */
+  .sub-list { display: flex; flex-direction: column; gap: 12px; }
+  .sub-item { border: 1px solid #e9ecef; border-radius: 10px; overflow: hidden; }
+  .sub-item-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: #f8f9fa; cursor: pointer; }
+  .sub-item-header:hover { background: #f0f2f5; }
+  .sub-order { width: 28px; height: 28px; background: #4dabf7; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .sub-info { flex: 1; }
+  .sub-info .title { font-weight: 600; font-size: 14px; }
+  .sub-info .time { font-size: 12px; color: #888; margin-top: 2px; }
+  .sub-actions { display: flex; gap: 8px; align-items: center; }
+  .sub-stats { display: flex; gap: 16px; align-items: center; }
+  .sub-stat { text-align: center; }
+  .sub-stat .n { font-size: 18px; font-weight: 700; color: #1a2332; }
+  .sub-stat .l { font-size: 11px; color: #888; }
+
+  .sub-item-body { padding: 16px 18px; border-top: 1px solid #e9ecef; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .sub-body-stat { background: #f8f9fa; border-radius: 8px; padding: 12px 16px; }
+  .sub-body-stat .label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .sub-body-stat .val { font-size: 20px; font-weight: 700; }
+  .sub-body-stat.green .val { color: #2f9e44; }
+  .sub-body-stat.blue .val { color: #4dabf7; }
+  .sub-body-stat.orange .val { color: #e67700; }
+
+  /* Progress bar */
+  .progress-wrap { margin-top: 8px; }
+  .progress-bar { height: 6px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #2f9e44; border-radius: 4px; }
+  .progress-label { font-size: 11px; color: #888; margin-top: 4px; }
+
+  /* Buttons */
+  .btn { padding: 7px 14px; border-radius: 7px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all .2s; }
+  .btn-primary { background: #4dabf7; color: #fff; }
+  .btn-primary:hover { background: #339af0; }
+  .btn-success { background: #2f9e44; color: #fff; }
+  .btn-success:hover { background: #2b8a3e; }
+  .btn-danger { background: #e03131; color: #fff; }
+  .btn-danger:hover { background: #c92a2a; }
+  .btn-outline { background: #fff; color: #4dabf7; border: 1px solid #4dabf7; }
+  .btn-outline:hover { background: #e7f5ff; }
+  .btn-ghost { background: transparent; color: #868e96; border: 1px solid #dee2e6; }
+  .btn-ghost:hover { background: #f1f3f5; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-add { display: flex; align-items: center; gap: 6px; }
+
+  /* Add sub modal style (inline) */
+  .add-sub-form { border: 2px dashed #4dabf7; border-radius: 10px; padding: 20px; background: #f8fcff; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 12px; font-weight: 600; color: #555; }
+  .form-group input, .form-group select, .form-group textarea { padding: 8px 10px; border: 1px solid #dee2e6; border-radius: 7px; font-size: 13px; }
+  .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #4dabf7; }
+  .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
+  /* Chevron */
+  .chevron { transition: transform .2s; }
+  .chevron.open { transform: rotate(180deg); }
+
+  /* Note */
+  .note-box { background: #fff9db; border: 1px solid #ffe066; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #7c5d00; margin-bottom: 20px; }
+  .note-box strong { display: block; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="logo">NBU <span>Activity</span></div>
+  <nav>
+    <div class="section">หลัก</div>
+    <a href="#">📊 Dashboard</a>
+    <a href="#" class="active">🎯 กิจกรรม</a>
+    <a href="#">👥 ผู้ใช้งาน</a>
+    <div class="section">รายงาน</div>
+    <a href="#">📈 สถิติ</a>
+    <a href="#">📥 นำเข้าข้อมูล</a>
+  </nav>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="#">กิจกรรม</a><span>›</span>
+    <strong>กิจกรรมปฐมนิเทศนักศึกษาใหม่ ปีการศึกษา 2568</strong>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1>🎓 กิจกรรมปฐมนิเทศนักศึกษาใหม่ ปีการศึกษา 2568</h1>
+      <div class="meta">
+        📅 วันที่ 1 สิงหาคม 2568 &nbsp;|&nbsp; 📍 อาคารเฉลิมพระเกียรติ &nbsp;|&nbsp;
+        <span class="badge badge-active">● เปิดใช้งาน</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost">✏️ แก้ไขกิจกรรมหลัก</button>
+      <button class="btn btn-primary btn-add">＋ เพิ่มกิจกรรมย่อย</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active">📋 กิจกรรมย่อย</button>
+    <button class="tab">👥 รายชื่อเข้าร่วมรวม</button>
+    <button class="tab">🎯 กลุ่มเป้าหมาย</button>
+    <button class="tab">📊 รายงาน</button>
+  </div>
+
+  <!-- Note -->
+  <div class="note-box">
+    <strong>💡 การทำงานของกิจกรรมย่อย</strong>
+    นักศึกษา 1 คน สามารถเช็คชื่อได้ทุกกิจกรรมย่อย &nbsp;|&nbsp; รายงานดูได้ทั้งภาพรวมและแยกตามกิจกรรมย่อย
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="cards-row">
+    <div class="stat-card blue">
+      <div class="label">กิจกรรมย่อยทั้งหมด</div>
+      <div class="value">2</div>
+      <div class="sub">ช่วงเช้า + ช่วงบ่าย</div>
+    </div>
+    <div class="stat-card green">
+      <div class="label">เข้าร่วมรวม (unique)</div>
+      <div class="value">312</div>
+      <div class="sub">จากเป้าหมาย 450 คน</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="label">เข้าครบทุกกิจกรรมย่อย</div>
+      <div class="value">287</div>
+      <div class="sub">คิดเป็น 63.8%</div>
+    </div>
+    <div class="stat-card red">
+      <div class="label">ขาดอย่างน้อย 1 กิจกรรมย่อย</div>
+      <div class="value">163</div>
+      <div class="sub">จากเป้าหมายทั้งหมด</div>
+    </div>
+  </div>
+
+  <!-- Sub-activity list -->
+  <div class="section-card">
+    <h2>กิจกรรมย่อย <span class="count">2 รายการ</span></h2>
+
+    <div class="sub-list">
+
+      <!-- Sub 1 (expanded) -->
+      <div class="sub-item">
+        <div class="sub-item-header">
+          <div class="sub-order">1</div>
+          <div class="sub-info">
+            <div class="title">ปฐมนิเทศรวม — ช่วงเช้า</div>
+            <div class="time">⏰ 08:00 – 12:00 น. &nbsp;|&nbsp; ห้องประชุมใหญ่ ชั้น 3</div>
+          </div>
+          <div class="sub-stats">
+            <div class="sub-stat">
+              <div class="n" style="color:#2f9e44">312</div>
+              <div class="l">เช็คชื่อแล้ว</div>
+            </div>
+            <div class="sub-stat">
+              <div class="n" style="color:#e03131">138</div>
+              <div class="l">ยังไม่เช็ค</div>
+            </div>
+          </div>
+          <span class="badge badge-closed">● ปิด session แล้ว</span>
+          <div class="sub-actions">
+            <button class="btn btn-ghost btn-sm">✏️</button>
+            <button class="btn btn-ghost btn-sm">📊 Report</button>
+          </div>
+          <span class="chevron open">▼</span>
+        </div>
+        <div class="sub-item-body">
+          <div class="sub-body-stat green">
+            <div class="label">เช็คชื่อแล้ว</div>
+            <div class="val">312 คน</div>
+            <div class="progress-wrap">
+              <div class="progress-bar"><div class="progress-fill" style="width:69.3%"></div></div>
+              <div class="progress-label">69.3% จากเป้าหมาย 450 คน</div>
+            </div>
+          </div>
+          <div class="sub-body-stat blue">
+            <div class="label">วิธีเช็คชื่อ</div>
+            <div class="val">QR 298 / Manual 14</div>
+          </div>
+          <div class="sub-body-stat orange">
+            <div class="label">Session ล่าสุด</div>
+            <div class="val" style="font-size:14px">08:00 – 11:45 น.</div>
+            <div style="font-size:11px;color:#888;margin-top:4px">ปิดโดย อ.สมศรี &nbsp;|&nbsp; 2 sessions</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub 2 (collapsed) -->
+      <div class="sub-item">
+        <div class="sub-item-header">
+          <div class="sub-order">2</div>
+          <div class="sub-info">
+            <div class="title">ปฐมนิเทศแยกตามคณะ — ช่วงบ่าย</div>
+            <div class="time">⏰ 13:00 – 17:00 น. &nbsp;|&nbsp; แยกตามห้องคณะ</div>
+          </div>
+          <div class="sub-stats">
+            <div class="sub-stat">
+              <div class="n" style="color:#2f9e44">287</div>
+              <div class="l">เช็คชื่อแล้ว</div>
+            </div>
+            <div class="sub-stat">
+              <div class="n" style="color:#e03131">163</div>
+              <div class="l">ยังไม่เช็ค</div>
+            </div>
+          </div>
+          <span class="badge badge-open">● session กำลังเปิด</span>
+          <div class="sub-actions">
+            <button class="btn btn-ghost btn-sm">✏️</button>
+            <button class="btn btn-ghost btn-sm">📊 Report</button>
+          </div>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+
+      <!-- Add new sub-activity form -->
+      <div class="add-sub-form">
+        <div style="font-size:13px;font-weight:700;color:#4dabf7;margin-bottom:14px;">＋ เพิ่มกิจกรรมย่อยใหม่</div>
+        <div class="form-row">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>ชื่อกิจกรรมย่อย *</label>
+            <input type="text" placeholder="เช่น ปฐมนิเทศช่วงเช้า, กิจกรรมกลุ่มช่วงบ่าย">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>เวลาเริ่ม *</label>
+            <input type="datetime-local" value="2025-08-01T13:00">
+          </div>
+          <div class="form-group">
+            <label>เวลาสิ้นสุด *</label>
+            <input type="datetime-local" value="2025-08-01T17:00">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>สถานที่</label>
+            <input type="text" placeholder="เช่น ห้องประชุม ชั้น 2">
+          </div>
+          <div class="form-group">
+            <label>หมายเหตุ</label>
+            <input type="text" placeholder="รายละเอียดเพิ่มเติม">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-ghost">ยกเลิก</button>
+          <button class="btn btn-primary">บันทึกกิจกรรมย่อย</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
