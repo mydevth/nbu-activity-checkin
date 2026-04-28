@@ -655,7 +655,6 @@
             <option value="admin">Admin</option>
             <option value="dean">Dean (คณบดี)</option>
             <option value="manager">Manager (ผู้บริหาร)</option>
-            <option value="superadmin">Superadmin</option>
           </select>
         </div>
       </div>
@@ -763,6 +762,9 @@ async function doLogin() {
   try {
     const data = await apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
     if (!data.success) { errEl.textContent = data.message; return; }
+    if (!['superadmin', 'admin'].includes(data.user.role)) {
+      errEl.textContent = 'ไม่มีสิทธิ์เข้าถึงหน้านี้ (เฉพาะ Admin เท่านั้น)'; return;
+    }
     token = data.token;
     currentUser = data.user;
     localStorage.setItem('admin_token', token);
@@ -796,10 +798,12 @@ function initAdmin() {
   document.getElementById('sidebar-avatar').textContent = currentUser.full_name[0];
   document.getElementById('topbar-user').textContent = `${currentUser.full_name} (${currentUser.role})`;
 
-  // ซ่อน Users nav ถ้าเป็น staff
-  if (currentUser.role === 'staff') {
+  // ซ่อนเมนูที่ไม่มีสิทธิ์
+  const isAdminRole = ['superadmin', 'admin'].includes(currentUser.role);
+  if (!isAdminRole) {
     document.getElementById('nav-users').style.display = 'none';
     document.getElementById('nav-section-admin').style.display = 'none';
+    document.getElementById('nav-import').style.display = 'none';
   }
 
   setInterval(() => {
@@ -891,7 +895,7 @@ async function loadActivities() {
 }
 
 function renderActivities(list) {
-  const isAdmin = currentUser.role !== 'staff';
+  const isAdmin = ['superadmin', 'admin'].includes(currentUser.role);
   const tbody = document.getElementById('activity-list');
   if (!list.length) {
     tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="icon"><i class="fa-solid fa-calendar-xmark"></i></div><p>ยังไม่มีกิจกรรม</p></div></td></tr>';
@@ -1174,7 +1178,7 @@ async function viewAttendance(activityId, title) {
       <td>${r.faculty || '-'}</td>
       <td>${formatDate(r.checked_at)}</td>
       <td><span class="badge ${r.method === 'qr_scan' ? 'badge-green' : 'badge-yellow'}">${r.method === 'qr_scan' ? 'QR' : 'Manual'}</span></td>
-      <td><button class="btn btn-red btn-sm" onclick="deleteAttendance('${r.id}','${activityId}','${title.replace(/'/g,"\\'")}')">ลบ</button></td>
+      <td>${['superadmin','admin'].includes(currentUser.role) ? `<button class="btn btn-red btn-sm" onclick="deleteAttendance('${r.id}','${activityId}','${title.replace(/'/g,"\\'")}')">ลบ</button>` : ''}</td>
     </tr>
   `).join('') || '<tr><td colspan="7"><div class="empty-state"><p>ยังไม่มีรายชื่อ</p></div></td></tr>';
 
@@ -1271,9 +1275,20 @@ function openUserModal(id = null) {
   document.getElementById('user-modal-title').textContent = id ? 'แก้ไขผู้ใช้' : 'เพิ่มผู้ใช้';
   document.getElementById('usr-id').value = '';
   ['usr-fullname','usr-username','usr-password','usr-faculty-scope'].forEach(f => document.getElementById(f).value = '');
-  document.getElementById('usr-role').value = 'staff';
   document.getElementById('usr-active').value = 'true';
   document.getElementById('pw-hint').style.display = id ? 'inline' : 'none';
+
+  // superadmin เท่านั้นที่กำหนด role superadmin ได้
+  const roleSelect = document.getElementById('usr-role');
+  const hasSuperOption = Array.from(roleSelect.options).some(o => o.value === 'superadmin');
+  if (currentUser.role === 'superadmin' && !hasSuperOption) {
+    const opt = document.createElement('option');
+    opt.value = 'superadmin'; opt.textContent = 'Superadmin';
+    roleSelect.appendChild(opt);
+  } else if (currentUser.role !== 'superadmin' && hasSuperOption) {
+    roleSelect.querySelector('option[value="superadmin"]').remove();
+  }
+  roleSelect.value = 'staff';
   toggleFacultyScope();
 
   if (id) {
@@ -1494,9 +1509,13 @@ function decodeJWT(t) {
 (async () => {
   if (!token) return;
   try {
+    const payload = decodeJWT(token);
+    if (!['superadmin', 'admin'].includes(payload.role)) {
+      localStorage.removeItem('admin_token'); return;
+    }
     const data = await apiFetch('/activities');
     if (data.success) {
-      currentUser = decodeJWT(token);
+      currentUser = payload;
       initAdmin();
     } else {
       localStorage.removeItem('admin_token');

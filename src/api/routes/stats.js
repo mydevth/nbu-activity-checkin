@@ -140,14 +140,28 @@ router.get('/:activityId', async (req, res) => {
                 ORDER BY att.checked_at DESC LIMIT 15
             `, p2),
 
-            // จำนวนเป้าหมายทั้งหมด (จากกลุ่มที่กำหนด + scope ของ dean)
+            // จำนวนเป้าหมายทั้งหมด
+            // explicit list → นับตรงจากตาราง (ถูกต้องเสมอ ไม่ขึ้นกับ nbu_students)
+            // rule-based   → นับจาก nbu_students ที่ match rules (+ dean scope)
             hasTargets
-                ? query(`
-                    SELECT COUNT(DISTINCT s.student_id) AS c
-                    FROM nbu_students s
-                    WHERE ${tgt.clause}
-                    ${scope ? `AND s.faculty = '${scope.replace(/'/g, "''")}'` : ''}
-                  `)
+                ? (hasExplicitList && !scope)
+                    ? query(
+                        'SELECT COUNT(*) AS c FROM nbu_activity_target_students WHERE activity_id = $1',
+                        [activityId]
+                      )
+                    : hasExplicitList && scope
+                    ? query(`
+                        SELECT COUNT(DISTINCT s.student_id) AS c
+                        FROM nbu_activity_target_students ts
+                        JOIN nbu_students s ON s.student_id = ts.student_id
+                        WHERE ts.activity_id = $1 AND s.faculty = $2
+                      `, [activityId, scope])
+                    : query(`
+                        SELECT COUNT(DISTINCT s.student_id) AS c
+                        FROM nbu_students s
+                        WHERE ${tgt.clause}
+                        ${scope ? `AND s.faculty = '${scope.replace(/'/g, "''")}'` : ''}
+                      `)
                 : Promise.resolve({ rows: [{ c: 0 }] }),
 
             // รายชื่อที่ยังไม่เข้าร่วม (เฉพาะกรณีมี targets)

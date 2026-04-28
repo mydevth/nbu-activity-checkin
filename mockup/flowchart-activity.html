@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBU Activity System — Flowchart</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f1923; color: #e2e8f0; }
+
+  header {
+    background: #003B7A;
+    padding: 16px 32px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  }
+  header h1 { font-size: 20px; font-weight: 700; }
+  header span { color: #93c5fd; font-size: 13px; }
+
+  .nav {
+    display: flex; gap: 8px; padding: 16px 32px;
+    background: #1a2332; border-bottom: 1px solid #2d3f55;
+    overflow-x: auto;
+  }
+  .nav-btn {
+    padding: 7px 18px; border-radius: 20px; border: 1px solid #2d3f55;
+    background: transparent; color: #94a3b8; cursor: pointer;
+    font-size: 13px; font-weight: 500; white-space: nowrap;
+    transition: all .2s; font-family: inherit;
+  }
+  .nav-btn.active { background: #4dabf7; color: #fff; border-color: #4dabf7; }
+  .nav-btn:hover:not(.active) { border-color: #4dabf7; color: #4dabf7; }
+
+  .content { padding: 32px; max-width: 1200px; margin: 0 auto; }
+
+  .flow-section { display: none; }
+  .flow-section.active { display: block; }
+
+  .flow-title {
+    font-size: 18px; font-weight: 700; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .flow-desc {
+    font-size: 13px; color: #94a3b8; margin-bottom: 28px;
+    border-left: 3px solid #4dabf7; padding-left: 12px;
+  }
+
+  .mermaid-wrap {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 28px;
+    border: 1px solid #2d3f55;
+    overflow-x: auto;
+  }
+
+  .legend {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    margin-top: 20px; padding: 14px 18px;
+    background: #1e293b; border-radius: 8px;
+    border: 1px solid #2d3f55;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #94a3b8; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>🏫</div>
+  <div>
+    <h1>NBU Activity System</h1>
+    <span>System Flowchart — ภาพรวมการทำงานระบบ</span>
+  </div>
+</header>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="show('overview')">🗺️ ภาพรวมระบบ</button>
+  <button class="nav-btn" onclick="show('activity')">📋 สร้างกิจกรรม</button>
+  <button class="nav-btn" onclick="show('qrscan')">📷 QR Scan Check-in</button>
+  <button class="nav-btn" onclick="show('import')">📥 Import นักศึกษา</button>
+  <button class="nav-btn" onclick="show('line')">💬 LINE OA</button>
+  <button class="nav-btn" onclick="show('report')">📊 Report</button>
+</div>
+
+<div class="content">
+
+  <!-- ── 1. ภาพรวมระบบ ─────────────────────────────────────── -->
+  <div class="flow-section active" id="flow-overview">
+    <div class="flow-title">🗺️ ภาพรวมระบบทั้งหมด</div>
+    <div class="flow-desc">แสดงความสัมพันธ์ของ Actor ทั้งหมดกับระบบ และ flow หลักของแต่ละส่วน</div>
+    <div class="mermaid-wrap">
+      <div class="mermaid">
+flowchart TD
+    A([👤 Admin / Superadmin]) -->|สร้างกิจกรรม + กำหนดกลุ่มเป้าหมาย| ACT[📋 กิจกรรม\nnbu_activities]
+    A -->|มอบหมายอาจารย์| STAFF[🧑‍🏫 อาจารย์ผู้รับผิดชอบ\nnbu_activity_staff]
+    A -->|นำเข้าข้อมูล| IMP[📥 Import นักศึกษา\nnbu_students + Redis]
+
+    STAFF -->|เปิด Session| SES[🟢 Session\nnbu_sessions]
+    SES -->|รับการสแกน| QR[📷 QR Scan\nScanner iPad]
+    QR -->|ค้นหาข้อมูลนักศึกษา| REDIS[(⚡ Redis Cache\nstudent:id)]
+    REDIS -->|บันทึก| ATT[✅ Attendance\nnbu_attendance]
+    STAFF -->|ปิด Session| SES2[🔴 Session Closed]
+
+    ATT -->|ดูสถิติ| STATS[📊 Stats Dashboard]
+    ATT -->|ออกรายงาน| RPT[📄 Excel / CSV]
+    ATT -->|แจ้งผ่าน LINE| LINE[💬 LINE OA\nFlex Message]
+
+    STD([👨‍🎓 นักศึกษา]) -->|สแกน QR บัตรนักศึกษา| QR
+    STD -->|ถาม LINE OA| LINE
+
+    style A fill:#003B7A,color:#fff,stroke:#0066cc
+    style STAFF fill:#1e3a5f,color:#fff,stroke:#0066cc
+    style STD fill:#2f4858,color:#fff,stroke:#4dabf7
+    style ACT fill:#1a3a2a,color:#fff,stroke:#2f9e44
+    style ATT fill:#1a3a2a,color:#fff,stroke:#2f9e44
+    style SES fill:#1a3a2a,color:#fff,stroke:#51cf66
+    style SES2 fill:#3a1a1a,color:#fff,stroke:#e03131
+    style REDIS fill:#3a2a00,color:#fff,stroke:#f59f00
+    style IMP fill:#1a2a3a,color:#fff,stroke:#4dabf7
+    style QR fill:#1a2a3a,color:#fff,stroke:#4dabf7
+    style STATS fill:#2a1a3a,color:#fff,stroke:#7950f2
+    style RPT fill:#2a1a3a,color:#fff,stroke:#7950f2
+    style LINE fill:#1a3a1a,color:#fff,stroke:#06c755
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#003B7A"></div> Admin / Staff</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1a3a2a"></div> ข้อมูลหลัก (DB)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3a2a00"></div> Cache (Redis)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2a1a3a"></div> Output (Report/Stats)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1a3a1a"></div> LINE Integration</div>
+    </div>
+  </div>
+
+  <!-- ── 2. สร้างกิจกรรม ──────────────────────────────────── -->
+  <div class="flow-section" id="flow-activity">
+    <div class="flow-title">📋 Flow การสร้างและจัดการกิจกรรม</div>
+    <div class="flow-desc">Admin สร้างกิจกรรม → มอบหมายอาจารย์ → กำหนดกลุ่มเป้าหมาย → Staff เปิด/ปิด Session</div>
+    <div class="mermaid-wrap">
+      <div class="mermaid">
+flowchart TD
+    START([Admin เข้าระบบ]) --> LIST[หน้ารายการกิจกรรม\nGET /api/v1/activities]
+    LIST --> NEW[กดสร้างกิจกรรมใหม่]
+    NEW --> FORM[กรอกข้อมูล\nชื่อ / วันที่ / สถานที่\nจำนวนที่รับ]
+    FORM --> ASSIGN[มอบหมายอาจารย์\nnbu_activity_staff]
+    ASSIGN --> TARGET{กำหนดกลุ่มเป้าหมาย?}
+
+    TARGET -->|ใช้ Dropdown| RULE[Rule-based\nเลือก คณะ / ระดับ / รุ่น\nnbu_activity_targets]
+    TARGET -->|นำเข้ารายชื่อ| EXLIST[Explicit List\nอัปโหลด CSV รายชื่อ\nnbu_activity_target_students]
+    TARGET -->|ไม่กำหนด| NOTGT[ไม่มีเป้าหมาย\nเปิดรับทุกคน]
+
+    RULE --> PREVIEW[Preview จำนวน\nPOST /targets/preview]
+    PREVIEW --> SAVE
+    EXLIST --> SAVE
+    NOTGT --> SAVE
+
+    SAVE[POST /api/v1/activities\nบันทึกลง PostgreSQL] --> DONE[✅ สร้างกิจกรรมสำเร็จ]
+
+    DONE --> SESS{Staff จะเช็คชื่อ?}
+    SESS -->|ใช่| OPEN[POST /session/open\nสร้าง nbu_sessions\nstatus = open]
+    OPEN --> SCAN[เปิดหน้า Scanner\nเริ่มสแกน QR]
+    SCAN --> CLOSE[POST /session/close\nstatus = closed]
+    CLOSE --> RPT[ออกรายงาน]
+
+    style START fill:#003B7A,color:#fff,stroke:none
+    style DONE fill:#1a3a2a,color:#fff,stroke:#2f9e44
+    style OPEN fill:#1a3a2a,color:#fff,stroke:#51cf66
+    style CLOSE fill:#3a1a1a,color:#fff,stroke:#e03131
+    style SAVE fill:#1a2a3a,color:#fff,stroke:#4dabf7
+    style RULE fill:#3a2a00,color:#fff,stroke:#f59f00
+    style EXLIST fill:#3a2a00,color:#fff,stroke:#f59f00
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. QR Scan ──────────────────────────────────────────── -->
+  <div class="flow-section" id="flow-qrscan">
+    <div class="flow-title">📷 Flow QR Scan Check-in (หัวใจหลักของระบบ)</div>
+    <div class="flow-desc">เครื่องสแกน QR → iPad ส่ง API → ตรวจสอบ → บันทึก → แสดงผล ทั้งหมดภายใน &lt;200ms</div>
+    <div class="mermaid-wrap">
+      <div class="mermaid">
+flowchart TD
+    QR([📷 เครื่องสแกน QR อ่านบัตร]) --> RAW[ได้ QR String\nformat: studentId|timestamp|hmac16]
+    RAW --> API[iPad ส่ง POST /api/v1/attendance/scan\nbody: qr_raw, activity_id, session_id]
+
+    API --> V1{ตรวจรูปแบบ QR\nverifyQR}
+    V1 -->|รูปแบบผิด| E1[❌ 400 รูปแบบ QR ไม่ถูกต้อง]
+    V1 -->|หมดอายุ > 5 นาที| E2[❌ 400 QR หมดอายุ]
+    V1 -->|HMAC ไม่ตรง| E3[❌ 400 QR ไม่ถูกต้อง]
+    V1 -->|ผ่าน| REDIS
+
+    REDIS[⚡ Redis HGETALL\nstudent:studentId\n< 5ms] --> V2{พบข้อมูล?}
+    V2 -->|ไม่พบ| E4[❌ 404 ไม่พบนักศึกษา]
+    V2 -->|พบ| V3
+
+    V3{Session เปิดอยู่?} -->|ไม่เปิด| E5[❌ 400 ยังไม่เปิด Session]
+    V3 -->|เปิดอยู่| V4
+
+    V4{เช็คชื่อซ้ำ?\nUNIQUE activity+student} -->|ซ้ำ| DUP[⚠️ 409 เช็คชื่อซ้ำ\nแสดงชื่อสีเหลือง\nเสียง error]
+    V4 -->|ยังไม่เช็ค| INSERT
+
+    INSERT[INSERT nbu_attendance async\nไม่รอ DB confirm] --> RES200[✅ 200 Response ทันที\nส่ง student data กลับ]
+
+    RES200 --> IPAD[iPad แสดงผล\n🟢 ชื่อ + รูป + คณะ\nเสียง beep success\n5 วินาที]
+
+    INSERT -.->|async background| PG[(PostgreSQL\nnbu_attendance)]
+
+    style QR fill:#003B7A,color:#fff,stroke:none
+    style REDIS fill:#3a2a00,color:#fff,stroke:#f59f00
+    style PG fill:#1a2a3a,color:#fff,stroke:#4dabf7
+    style RES200 fill:#1a3a2a,color:#fff,stroke:#2f9e44
+    style IPAD fill:#1a3a2a,color:#fff,stroke:#51cf66
+    style DUP fill:#3a2a00,color:#fff,stroke:#f59f00
+    style E1 fill:#3a1a1a,color:#fff,stroke:#e03131
+    style E2 fill:#3a1a1a,color:#fff,stroke:#e03131
+    style E3 fill:#3a1a1a,color:#fff,stroke:#e03131
+    style E4 fill:#3a1a1a,color:#fff,stroke:#e03131
+    style E5 fill:#3a1a1a,color:#fff,stroke:#e03131
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#1a3a2a"></div> สำเร็จ</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3a1a1a"></div> Error / ปฏิเสธ</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3a2a00"></div> เช็คชื่อซ้ำ / Cache</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1a2a3a"></div> Database</div>
+    </div>
+  </div>
+
+  <!-- ── 4. Import ───────────────────────────────────────────── -->
+  <div class="flow-section" id="flow-import">
+    <div class="flow-title">📥 Flow Import ข้อมูลนักศึกษา (3 Phases)</div>
+    <div class="flow-desc">อัปโหลด CSV → Map columns → Phase 1: รูป → Phase 2: PostgreSQL → Phase 3: Redis</div>
+    <div class="mermaid-wrap">
+      <div class="mermaid">
+flowchart TD
+    UP([Admin อัปโหลด CSV\nmax 20MB]) --> PARSE[Parse CSV\nรองรับ BOM + Thai\nquoted fields]
+    PARSE --> PREV[Preview 5 แถวแรก\nเลือก column mapping]
+    PREV --> MAP[Map: colId, colName,\ncolFaculty, colMajor,\ncolLevel, ...]
+    MAP --> OPT{ข้าม\nรูปภาพ?}
+
+    OPT -->|ไม่ข้าม| P1
+    OPT -->|ข้าม| CHECK_LOCAL
+
+    CHECK_LOCAL[เช็คไฟล์ local\n/thumbnails/id.jpg] -->|มีอยู่แล้ว| USE_OLD[ใช้รูปเดิม]
+    CHECK_LOCAL -->|ไม่มี| USE_EMPTY[photo_url = '']
+    USE_OLD --> P2
+    USE_EMPTY --> P2
+
+    P1[Phase 1: ดาวน์โหลดรูป\n10 คนพร้อมกัน concurrent] --> DL{reg.northbkk.ac.th\n/studentimg/YY/id.jpg}
+    DL -->|HTTP 200| RESIZE[sharp resize\n120×120 JPEG q=80\nบันทึก /thumbnails/id.jpg]
+    DL -->|HTTP error / timeout| NOPHOTO[photo_url = '']
+    RESIZE --> NEXT_PHOTO{ยังมีต่อ?}
+    NOPHOTO --> NEXT_PHOTO
+    NEXT_PHOTO -->|ใช่| P1
+    NEXT_PHOTO -->|ครบแล้ว| P2
+
+    P2[Phase 2: PostgreSQL\nINSERT 200 คน/batch] --> UPSERT[ON CONFLICT student_id\nDO UPDATE\nไม่ทับ photo ถ้าใหม่ว่าง]
+    UPSERT --> NEXT_DB{ยังมีต่อ?}
+    NEXT_DB -->|ใช่| P2
+    NEXT_DB -->|ครบแล้ว| P3
+
+    P3[Phase 3: Redis Pipeline\nHSET 200 คน/batch\nstudent:id → hash] --> NEXT_RED{ยังมีต่อ?}
+    NEXT_RED -->|ใช่| P3
+    NEXT_RED -->|ครบแล้ว| DONE2[✅ Import สำเร็จ\nSSE stream ส่ง done]
+
+    SSE[💻 Admin หน้า Import\nดู progress real-time\nSSE /import/progress/jobId] -.->|polling 600ms| P1
+    SSE -.->|polling 600ms| P2
+    SSE -.->|polling 600ms| P3
+
+    style UP fill:#003B7A,color:#fff,stroke:none
+    style DONE2 fill:#1a3a2a,color:#fff,stroke:#2f9e44
+    style P1 fill:#1a2a3a,color:#fff,stroke:#4dabf7
+    style P2 fill:#1a2a3a,color:#fff,stroke:#4dabf7
+    style P3 fill:#3a2a00,color:#fff,stroke:#f59f00
+    style RESIZE fill:#1a3a2a,color:#fff,stroke:#2f9e44
+    style UPSERT fill:#1a3a2a,color:#fff,stroke:#2f9e44
+    style SSE fill:#2a1a3a,color:#fff,stroke:#7950f2
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 5. LINE OA ──────────────────────────────────────────── -->
+  <div class="flow-section" id="flow-line">
+    <div class="flow-title">💬 Flow LINE OA Integration</div>
+    <div class="flow-desc">นักศึกษาพิมพ์คำสั่งใน LINE → Webhook ตรวจสอบ → ค้นหาประวัติ → ตอบกลับ Flex Message</div>
+    <div class="mermaid-wrap">
+      <div class="mermaid">
+flowchart TD
+    STD([👨‍🎓 นักศึกษาพิมพ์\nใน LINE OA]) --> MSG{คำสั่ง?}
+    MSG -->|กิจกรรม| ALL[ดูประวัติทั้งหมด]
+    MSG -->|กิจกรรมล่าสุด| LAST[ดู 5 รายการล่าสุด]
+    MSG -->|อื่นๆ| IGNORE[ไม่ตอบสนอง]
+
+    ALL --> WH
+    LAST --> WH
+
+    WH[POST /line/webhook\nรับ raw body] --> SIG{ตรวจสอบ\nHMAC-SHA256\nSignature}
+    SIG -->|ไม่ตรง| REJECT[❌ 403 Unauthorized]
+    SIG -->|ตรง| FIND
+
+    FIND[ค้นหาจาก\nline_student_links\nLINE UUID → student_id] --> FOUND{พบนักศึกษา?}
+    FOUND -->|ไม่พบ| REPLY_ERR[ตอบกลับ:\n'ไม่พบข้อมูลนักศึกษา']
+    FOUND -->|พบ| QUERY
+
+    QUERY[Query PostgreSQL\nnbu_attendance JOIN\nnbu_activities] --> BUILD[สร้าง Flex Message\nCarousel]
+    BUILD --> FLEX[แสดง:\n📅 ชื่อกิจกรรม\n📍 สถานที่\n🕐 วันที่เช็คชื่อ\n✅ สถานะ]
+    FLEX --> LINE_REPLY[LINE Reply API\nส่งกลับนักศึกษา]
+
+    STD2([👨‍🎓 นักศึกษา\nใช้ LIFF App]) --> LIFF[GET /liff]
+    LIFF --> TOKEN[liff.getAccessToken\nส่ง LINE token]
+    TOKEN --> VERIFY[GET /api/v1/liff/me\nverify token กับ LINE]
+    VERIFY --> PROFILE[ดูโปรไฟล์ + สถิติ\ntotal, this_month]
+    PROFILE --> HIST[GET /api/v1/liff/attendance\nประวัติ 20/หน้า paginated]
+
+    style STD fill:#06c755,color:#fff,stroke:none
+    style STD2 fill:#06c755,color:#fff,stroke:none
+    style FLEX fill:#1a3a1a,color:#fff,stroke:#06c755
+    style LINE_REPLY fill:#1a3a1a,color:#fff,stroke:#06c755
+    style REJECT fill:#3a1a1a,color:#fff,stroke:#e03131
+    style REPLY_ERR fill:#3a1a1a,color:#fff,stroke:#e03131
+    style WH fill:#1a2a3a,color:#fff,stroke:#4dabf7
+    style LIFF fill:#1a2a3a,color:#fff,stroke:#4dabf7
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6. Report ───────────────────────────────────────────── -->
+  <div class="flow-section" id="flow-report">
+    <div class="flow-title">📊 Flow การดูรายงานและสถิติ</div>
+    <div class="flow-desc">Stats Dashboard (dean scoped) + Export Excel/CSV + Public Report</div>
+    <div class="mermaid-wrap">
+      <div class="mermaid">
+flowchart TD
+    USER([👤 ผู้ใช้เข้าหน้า Stats]) --> AUTH{JWT Valid?}
+    AUTH -->|ไม่ valid| LOGIN[Redirect Login]
+    AUTH -->|valid| ROLE{Role?}
+
+    ROLE -->|superadmin / admin| ALL_ACT[GET /stats/activities\nเห็นทุกกิจกรรม]
+    ROLE -->|dean| SCOPE[GET /stats/activities\nกรอง faculty_scope\nเห็นกิจกรรมในคณะตัวเอง]
+    ROLE -->|staff| RPT_ONLY[เข้าได้แค่ Report\nกิจกรรมตัวเอง]
+
+    ALL_ACT --> SEL[เลือกกิจกรรม]
+    SCOPE --> SEL
+
+    SEL --> DETAIL[GET /stats/:activityId\n10 parallel queries]
+
+    DETAIL --> Q1[① รวมทั้งหมด]
+    DETAIL --> Q2[② แยกตามคณะ]
+    DETAIL --> Q3[③ แยกคณะ+สาขา]
+    DETAIL --> Q4[④ เช็คชื่อล่าสุด 15]
+    DETAIL --> Q5[⑤ จำนวนเป้าหมาย]
+    DETAIL --> Q6[⑥ รายชื่อขาด absent]
+    DETAIL --> Q7[⑦ รายชื่อเข้าร่วม]
+    DETAIL --> Q8[⑧ target แยกคณะ]
+    DETAIL --> Q9[⑨ target แยกสาขา]
+    DETAIL --> Q10[⑩ non-target attended]
+
+    Q1 & Q2 & Q3 & Q4 & Q5 & Q6 & Q7 & Q8 & Q9 & Q10 --> RENDER[Render Dashboard\nกราฟ / ตาราง / อัตรา]
+
+    RENDER --> EXP{Export?}
+    EXP -->|Excel| XLS[GET /reports/:id/excel\nExcelJS workbook\nmulti-sheet + format]
+    EXP -->|CSV| CSV2[GET /reports/:id/csv\nUTF-8 BOM\nสำหรับ Excel ไทย]
+    EXP -->|Public| PUB[GET /public/stats/:id\nไม่แสดงชื่อนักศึกษา]
+
+    RPT_ONLY --> XLS
+    RPT_ONLY --> CSV2
+
+    style USER fill:#003B7A,color:#fff,stroke:none
+    style RENDER fill:#2a1a3a,color:#fff,stroke:#7950f2
+    style XLS fill:#1a3a2a,color:#fff,stroke:#2f9e44
+    style CSV2 fill:#1a3a2a,color:#fff,stroke:#2f9e44
+    style PUB fill:#1a3a1a,color:#fff,stroke:#06c755
+    style SCOPE fill:#3a2a00,color:#fff,stroke:#f59f00
+    style LOGIN fill:#3a1a1a,color:#fff,stroke:#e03131
+    style DETAIL fill:#1a2a3a,color:#fff,stroke:#4dabf7
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#003B7A"></div> Admin / User</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3a2a00"></div> Dean (Scoped)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2a1a3a"></div> Dashboard Render</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1a3a2a"></div> Export Output</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3a1a1a"></div> Error / ปฏิเสธ</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  themeVariables: {
+    primaryColor: '#1e293b',
+    primaryTextColor: '#e2e8f0',
+    primaryBorderColor: '#4dabf7',
+    lineColor: '#4dabf7',
+    secondaryColor: '#1a2332',
+    tertiaryColor: '#0f1923',
+    background: '#0f1923',
+    mainBkg: '#1e293b',
+    nodeBorder: '#334155',
+    clusterBkg: '#1a2332',
+    titleColor: '#e2e8f0',
+    edgeLabelBackground: '#1a2332',
+    fontFamily: 'Segoe UI, sans-serif',
+  },
+  flowchart: { curve: 'basis', padding: 20 },
+});
+
+function show(id) {
+  document.querySelectorAll('.flow-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('flow-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
