@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBU Nursing Dashboard - Donut Style</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Anuphan', sans-serif; background-color: #f1f5f9; }
+        .donut-card { height: 220px; position: relative; }
+        .chart-container { position: relative; height: 350px; width: 100%; }
+    </style>
+</head>
+<body>
+
+    <nav class="bg-[#1e3a8a] text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-white p-1 rounded-full"><div class="w-8 h-8 bg-blue-900 rounded-full"></div></div>
+                <h1 class="text-lg font-bold">NBU Nursing Analytics</h1>
+            </div>
+            <select id="dashboardYear" onchange="updateDashboard()" class="bg-blue-800 text-white px-4 py-2 rounded-xl outline-none font-bold border border-blue-700 cursor-pointer">
+                <option value="2567">ปีการศึกษา 2567</option>
+                <option value="2568">ปีการศึกษา 2568</option>
+                <option value="2569">ปีการศึกษา 2569</option>
+            </select>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-6">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200">
+                <h3 class="text-center text-sm font-bold text-slate-500 mb-2">ผ่านรอบที่ 1</h3>
+                <div class="donut-card"><canvas id="donutR1"></canvas></div>
+            </div>
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200">
+                <h3 class="text-center text-sm font-bold text-slate-500 mb-2">ผ่านรอบที่ 2</h3>
+                <div class="donut-card"><canvas id="donutR2"></canvas></div>
+            </div>
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200">
+                <h3 class="text-center text-sm font-bold text-slate-500 mb-2">ผ่านรอบที่ 3</h3>
+                <div class="donut-card"><canvas id="donutR3"></canvas></div>
+            </div>
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-blue-200 bg-blue-50/30">
+                <h3 class="text-center text-sm font-bold text-blue-900 mb-2">ผ่านครบ 8 วิชา</h3>
+                <div class="donut-card"><canvas id="donutTotal"></canvas></div>
+            </div>
+        </div>
+
+        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">ผลการสอบแยกตามรายวิชาและรอบ</h2>
+                    <p class="text-sm text-slate-400 italic">คลิกที่แท่งกราฟเพื่อดูรายชื่อนักศึกษาด้านล่าง</p>
+                </div>
+                <div class="flex gap-4 text-[10px] font-bold uppercase tracking-wider">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-blue-500 rounded-full"></span> รอบ 1</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-orange-400 rounded-full"></span> รอบ 2</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-purple-400 rounded-full"></span> รอบ 3</span>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="mainBarChart"></canvas>
+            </div>
+        </div>
+
+        <div id="drillDownSection" class="bg-white rounded-3xl shadow-2xl border border-blue-100 overflow-hidden hidden animate-in slide-in-from-bottom duration-500">
+            <div class="bg-blue-900 p-6 flex justify-between items-center">
+                <h3 class="text-white font-bold" id="tableTitle">รายชื่อนักศึกษา</h3>
+                <button onclick="document.getElementById('drillDownSection').classList.add('hidden')" class="text-blue-200 hover:text-white">ปิด X</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b text-slate-400 text-[11px] uppercase tracking-widest">
+                        <tr>
+                            <th class="p-4">ลำดับ</th>
+                            <th class="p-4">รหัสนักศึกษา</th>
+                            <th class="p-4">ชื่อ-นามสกุล</th>
+                            <th class="p-4">สถานะวิชาที่คลิก</th>
+                            <th class="p-4">รวมผลสอบสภาฯ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="drillDownTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const subjects = ["การผดุงครรภ์", "มารดาและทารก", "เด็กและวัยรุ่น", "ผู้ใหญ่", "ผู้สูงอายุ", "สุขภาพจิต", "อนามัยชุมชน", "กฎหมาย/จรรยาบรรณ"];
+        let students = [];
+        let charts = {};
+
+        // 1. จำลองข้อมูล 150 คน (สุ่มความก้าวหน้า)
+        function generateData() {
+            students = [];
+            [2567, 2568, 2569].forEach(y => {
+                for(let i=1; i<=50; i++) {
+                    const r1 = Array.from({length: 8}, () => Math.random() > 0.5).map((p, idx) => p ? idx : null).filter(v => v !== null);
+                    const r2 = Array.from({length: 8}, () => Math.random() > 0.6).map((p, idx) => (p && !r1.includes(idx)) ? idx : null).filter(v => v !== null);
+                    const r3 = Array.from({length: 8}, () => Math.random() > 0.7).map((p, idx) => (p && !r1.includes(idx) && !r2.includes(idx)) ? idx : null).filter(v => v !== null);
+
+                    students.push({ id: `${y}_${i}`, code: `${y-2500}011${String(i).padStart(4,'0')}`, name: `นักศึกษา ${i} รุ่นปี ${y}`, year: y, r1, r2, r3 });
+                }
+            });
+        }
+
+        // 2. ปลั๊กอินเสริมสำหรับเขียนตัวเลขกลางวง Donut
+        const centerTextPlugin = {
+            id: 'centerText',
+            afterDraw(chart) {
+                if (chart.config.type !== 'doughnut') return;
+                const { ctx, chartArea: { top, bottom, left, right } } = chart;
+                ctx.save();
+                ctx.font = 'bold 20px Anuphan';
+                ctx.fillStyle = '#1e293b';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const text = chart.config.data.datasets[0].data[0] + '%';
+                ctx.fillText(text, (left + right) / 2, (top + bottom) / 2 + 5);
+                ctx.restore();
+            }
+        };
+        Chart.register(centerTextPlugin);
+
+        // 3. ฟังก์ชันอัปเดต Dashboard
+        function updateDashboard() {
+            const year = parseInt(document.getElementById('dashboardYear').value);
+            const data = students.filter(s => s.year === year);
+            const total = data.length;
+
+            // คำนวณยอดคนผ่านครบ (8/8) แยกแต่ละรอบ
+            const passR1 = data.filter(s => s.r1.length === 8).length;
+            const passR2 = data.filter(s => s.r1.length < 8 && (new Set([...s.r1, ...s.r2]).size === 8)).length;
+            const passR3 = data.filter(s => new Set([...s.r1, ...s.r2]).size < 8 && (new Set([...s.r1, ...s.r2, ...s.r3]).size === 8)).length;
+            const grandTotal = data.filter(s => new Set([...s.r1, ...s.r2, ...s.r3]).size === 8).length;
+
+            // อัปเดต Donut Charts
+            updateDonut('donutR1', passR1, total, '#3b82f6');
+            updateDonut('donutR2', passR2, total, '#fb923c');
+            updateDonut('donutR3', passR3, total, '#c084fc');
+            updateDonut('donutTotal', grandTotal, total, '#059669');
+
+            renderMainBar(data);
+        }
+
+        function updateDonut(id, val, total, color) {
+            const percent = Math.round((val / total) * 100);
+            if (charts[id]) charts[id].destroy();
+            
+            const ctx = document.getElementById(id).getContext('2d');
+            charts[id] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [percent, 100 - percent],
+                        backgroundColor: [color, '#f1f5f9'],
+                        borderWidth: 0,
+                        hoverOffset: 0
+                    }]
+                },
+                options: { cutout: '75%', plugins: { tooltip: { enabled: false }, legend: { display: false } } }
+            });
+        }
+
+        // 4. กราฟแท่งหลัก (Interactive)
+        function renderMainBar(yearData) {
+            const ctx = document.getElementById('mainBarChart').getContext('2d');
+            if (charts.main) charts.main.destroy();
+
+            const getData = (r) => subjects.map((_, i) => yearData.filter(s => s[r].includes(i)).length);
+
+            charts.main = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: subjects,
+                    datasets: [
+                        { label: 'รอบ 1', data: getData('r1'), backgroundColor: '#3b82f6', borderRadius: 5 },
+                        { label: 'รอบ 2', data: getData('r2'), backgroundColor: '#fb923c', borderRadius: 5 },
+                        { label: 'รอบ 3', data: getData('r3'), backgroundColor: '#c084fc', borderRadius: 5 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, max: 50 }, x: { grid: { display: false } } },
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const { datasetIndex, index } = elements[0];
+                            showDrillDown(yearData, datasetIndex + 1, index);
+                        }
+                    }
+                }
+            });
+        }
+
+        // 5. แสดงรายชื่อ (Drill-down)
+        function showDrillDown(yearData, roundNum, subIdx) {
+            const rKey = 'r' + roundNum;
+            const filtered = yearData.filter(s => s[rKey].includes(subIdx));
+            
+            document.getElementById('tableTitle').innerText = `รายชื่อผู้สอบผ่านวิชา "${subjects[subIdx]}" (รอบที่ ${roundNum})`;
+            const tbody = document.getElementById('drillDownTableBody');
+            tbody.innerHTML = filtered.map((s, i) => {
+                const totalPass = new Set([...s.r1, ...s.r2, ...s.r3]).size;
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 text-slate-400">${i + 1}</td>
+                        <td class="p-4 font-bold text-blue-900">${s.code}</td>
+                        <td class="p-4 font-medium text-slate-700">${s.name}</td>
+                        <td class="p-4"><span class="text-green-600 font-bold italic">✓ ผ่านรอบที่ ${roundNum}</span></td>
+                        <td class="p-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${totalPass === 8 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
+                                ${totalPass}/8 วิชา
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('drillDownSection').classList.remove('hidden');
+            document.getElementById('drillDownSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // เริ่มระบบ
+        generateData();
+        updateDashboard();
+    </script>
+</body>
+</html>

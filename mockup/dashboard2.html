@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBU Nursing - Interactive Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Anuphan', sans-serif; background-color: #f1f5f9; }
+        .chart-container { position: relative; height: 400px; width: 100%; }
+        .selected-segment { border: 2px solid #1e3a8a; background-color: #eff6ff; }
+    </style>
+</head>
+<body>
+
+    <nav class="bg-blue-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold">NBU Nursing Exam Analytics</h1>
+            <div class="space-x-4">
+                <button onclick="window.location.reload()" class="bg-blue-800 px-4 py-2 rounded-lg text-sm">รีเฟรชข้อมูล</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-6">
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <label class="block text-sm font-semibold text-slate-500 mb-2">เลือกปีการศึกษาที่ต้องการดู</label>
+                <select id="dashboardYear" onchange="updateDashboard()" class="w-full text-lg font-bold text-blue-900 outline-none cursor-pointer">
+                    <option value="2567">2567</option>
+                    <option value="2568">2568</option>
+                    <option value="2569">2569</option>
+                </select>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center">
+                <span class="text-slate-400 text-xs uppercase font-bold tracking-wider">สอบผ่านรอบที่ 1</span>
+                <div class="text-2xl font-bold text-blue-600" id="stat-r1">-</div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center">
+                <span class="text-slate-400 text-xs uppercase font-bold tracking-wider">สอบผ่านรอบที่ 2-3</span>
+                <div class="text-2xl font-bold text-orange-500" id="stat-r23">-</div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center border-l-4 border-l-green-500">
+                <span class="text-slate-400 text-xs uppercase font-bold tracking-wider">ผ่านครบทั้งหมด</span>
+                <div class="text-2xl font-bold text-green-600" id="stat-total">-</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">กราฟแสดงผลการสอบแยกตามวิชาและรอบ</h2>
+                    <p class="text-sm text-slate-500 italic">* คลิกที่แท่งกราฟเพื่อดูรายชื่อนักศึกษา</p>
+                </div>
+                <div class="flex gap-4 text-xs">
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-500 rounded-sm"></span> รอบที่ 1</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-orange-400 rounded-sm"></span> รอบที่ 2</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-purple-400 rounded-sm"></span> รอบที่ 3</span>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="drillDownChart"></canvas>
+            </div>
+        </div>
+
+        <div id="drillDownSection" class="bg-white rounded-3xl shadow-xl border border-blue-100 overflow-hidden hidden animate-in slide-in-from-bottom duration-500">
+            <div class="bg-blue-50 p-6 border-b border-blue-100 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-blue-900" id="tableTitle">รายชื่อนักศึกษา</h3>
+                <span class="bg-blue-900 text-white px-4 py-1 rounded-full text-xs" id="studentCount">0 คน</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-white text-slate-500 text-xs uppercase tracking-wider">
+                        <tr>
+                            <th class="p-4">ลำดับ</th>
+                            <th class="p-4">รหัสนักศึกษา</th>
+                            <th class="p-4">ชื่อ-นามสกุล</th>
+                            <th class="p-4">สถานะวิชานี้</th>
+                            <th class="p-4">ภาพรวม (ผ่าน/8)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="drillDownTableBody" class="divide-y divide-slate-100 text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const subjects = ["การผดุงครรภ์", "มารดาและทารก", "เด็กและวัยรุ่น", "ผู้ใหญ่", "ผู้สูงอายุ", "สุขภาพจิต", "อนามัยชุมชน", "กฎหมาย/จรรยาบรรณ"];
+        let students = [];
+        let myChart = null;
+
+        // 1. จำลองข้อมูล 150 คน
+        function generateMockData() {
+            students = [];
+            [2567, 2568, 2569].forEach(y => {
+                for(let i=1; i<=50; i++) {
+                    // สุ่มข้อมูลให้ดูสมจริง
+                    const passR1 = Array.from({length: 8}, () => Math.random() > 0.4);
+                    const passR2 = passR1.map(p => p ? false : Math.random() > 0.5);
+                    const passR3 = passR1.map((p, idx) => (p || passR2[idx]) ? false : Math.random() > 0.6);
+
+                    students.push({
+                        id: `${y}_${i}`,
+                        code: `${y-2500}011${String(i).padStart(4,'0')}`,
+                        name: `นักศึกษา ${i} รุ่นปี ${y}`,
+                        year: y,
+                        r1: passR1.map((p, idx) => p ? idx : null).filter(v => v !== null),
+                        r2: passR2.map((p, idx) => p ? idx : null).filter(v => v !== null),
+                        r3: passR3.map((p, idx) => p ? idx : null).filter(v => v !== null)
+                    });
+                }
+            });
+        }
+
+        // 2. อัปเดตหน้า Dashboard
+        function updateDashboard() {
+            const selectedYear = parseInt(document.getElementById('dashboardYear').value);
+            const data = students.filter(s => s.year === selectedYear);
+
+            // สถิติ Card
+            const r1Pass = data.filter(s => s.r1.length === 8).length;
+            const overallPass = data.filter(s => new Set([...s.r1, ...s.r2, ...s.r3]).size === 8).length;
+            document.getElementById('stat-r1').innerText = `${r1Pass} คน (${((r1Pass/50)*100).toFixed(0)}%)`;
+            document.getElementById('stat-r23').innerText = `${overallPass - r1Pass} คน`;
+            document.getElementById('stat-total').innerText = `${overallPass} / 50 คน`;
+
+            renderChart(data);
+            document.getElementById('drillDownSection').classList.add('hidden'); // ซ่อนตารางตอนเปลี่ยนปี
+        }
+
+        // 3. สร้างกราฟ Interactive
+        function renderChart(yearData) {
+            const ctx = document.getElementById('drillDownChart').getContext('2d');
+            if (myChart) myChart.destroy();
+
+            const getSubjectCount = (round) => subjects.map((_, idx) => 
+                yearData.filter(s => s[round].includes(idx)).length
+            );
+
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: subjects,
+                    datasets: [
+                        { label: 'รอบที่ 1', data: getSubjectCount('r1'), backgroundColor: '#3b82f6' },
+                        { label: 'รอบที่ 2', data: getSubjectCount('r2'), backgroundColor: '#fb923c' },
+                        { label: 'รอบที่ 3', data: getSubjectCount('r3'), backgroundColor: '#c084fc' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, max: 50, grid: { display: false } },
+                        x: { grid: { display: false } }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const { datasetIndex, index } = elements[0];
+                            showDrillDown(yearData, datasetIndex + 1, index);
+                        }
+                    }
+                }
+            });
+        }
+
+        // 4. แสดงตารางรายชื่อเมื่อคลิกกราฟ
+        function showDrillDown(yearData, roundNum, subjectIdx) {
+            const roundKey = 'r' + roundNum;
+            const subjectName = subjects[subjectIdx];
+            const filteredStudents = yearData.filter(s => s[roundKey].includes(subjectIdx));
+
+            // อัปเดต UI หัวตาราง
+            document.getElementById('tableTitle').innerHTML = `นักศึกษาที่สอบผ่านวิชา <span class="text-blue-600">"${subjectName}"</span> ใน <span class="text-blue-600">รอบที่ ${roundNum}</span>`;
+            document.getElementById('studentCount').innerText = `${filteredStudents.length} คน`;
+            
+            const tbody = document.getElementById('drillDownTableBody');
+            tbody.innerHTML = filteredStudents.map((s, idx) => {
+                const totalPassCount = new Set([...s.r1, ...s.r2, ...s.r3]).size;
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 text-slate-400">${idx + 1}</td>
+                        <td class="p-4 font-bold text-slate-700">${s.code}</td>
+                        <td class="p-4">${s.name}</td>
+                        <td class="p-4 text-green-600 font-bold italic">✓ ผ่านในรอบที่ ${roundNum}</td>
+                        <td class="p-4">
+                            <div class="w-full bg-slate-100 rounded-full h-2 w-24 overflow-hidden">
+                                <div class="bg-blue-600 h-full" style="width: ${(totalPassCount/8)*100}%"></div>
+                            </div>
+                            <span class="text-xs text-slate-500">${totalPassCount}/8 วิชา</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('drillDownSection').classList.remove('hidden');
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        // เริ่มต้นระบบ
+        generateMockData();
+        updateDashboard();
+    </script>
+</body>
+</html>

@@ -3,209 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NBU Nursing - Interactive Dashboard</title>
+    <title>NBU Nursing Exam - Pro Version</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Anuphan', sans-serif; background-color: #f1f5f9; }
-        .chart-container { position: relative; height: 400px; width: 100%; }
-        .selected-segment { border: 2px solid #1e3a8a; background-color: #eff6ff; }
+        body { font-family: 'Anuphan', sans-serif; background-color: #f8fafc; }
+        .active-nav { border-bottom: 3px solid #1e3a8a; color: #1e3a8a; font-weight: bold; }
+        .status-pill { font-size: 0.7rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-weight: 700; border: 1px solid; }
     </style>
 </head>
 <body>
 
-    <nav class="bg-blue-900 text-white shadow-lg sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold">NBU Nursing Exam Analytics</h1>
-            <div class="space-x-4">
-                <button onclick="window.location.reload()" class="bg-blue-800 px-4 py-2 rounded-lg text-sm">รีเฟรชข้อมูล</button>
+    <nav class="bg-white shadow-sm sticky top-0 z-40 border-b">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-3">
+                    <img src="https://www.northbkk.ac.th/assets/img/logo.png" class="h-10 hidden md:block" alt="NBU Logo">
+                    <span class="text-lg font-bold text-blue-900 uppercase">Nursing Exam Tracking</span>
+                </div>
+                <div class="flex space-x-6">
+                    <button onclick="switchPage('record')" id="nav-record" class="py-5 active-nav">บันทึกผลการสอบ</button>
+                    <button onclick="switchPage('dashboard')" id="nav-dashboard" class="py-5 text-gray-400">Dashboard</button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto p-6 space-y-6">
-        
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <label class="block text-sm font-semibold text-slate-500 mb-2">เลือกปีการศึกษาที่ต้องการดู</label>
-                <select id="dashboardYear" onchange="updateDashboard()" class="w-full text-lg font-bold text-blue-900 outline-none cursor-pointer">
-                    <option value="2567">2567</option>
-                    <option value="2568">2568</option>
-                    <option value="2569">2569</option>
-                </select>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                <span class="text-slate-400 text-xs uppercase font-bold tracking-wider">สอบผ่านรอบที่ 1</span>
-                <div class="text-2xl font-bold text-blue-600" id="stat-r1">-</div>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                <span class="text-slate-400 text-xs uppercase font-bold tracking-wider">สอบผ่านรอบที่ 2-3</span>
-                <div class="text-2xl font-bold text-orange-500" id="stat-r23">-</div>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center border-l-4 border-l-green-500">
-                <span class="text-slate-400 text-xs uppercase font-bold tracking-wider">ผ่านครบทั้งหมด</span>
-                <div class="text-2xl font-bold text-green-600" id="stat-total">-</div>
-            </div>
-        </div>
+    <main class="max-w-7xl mx-auto p-6">
 
-        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-            <div class="flex justify-between items-end mb-6">
+        <div id="page-record">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <h2 class="text-xl font-bold text-slate-800">กราฟแสดงผลการสอบแยกตามวิชาและรอบ</h2>
-                    <p class="text-sm text-slate-500 italic">* คลิกที่แท่งกราฟเพื่อดูรายชื่อนักศึกษา</p>
+                    <h1 class="text-2xl font-bold text-gray-800">ระบบบันทึกผลการสอบ</h1>
+                    <p class="text-gray-500 text-sm">คณะพยาบาลศาสตร์ มหาวิทยาลัยนอร์ทกรุงเทพ</p>
                 </div>
-                <div class="flex gap-4 text-xs">
-                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-500 rounded-sm"></span> รอบที่ 1</span>
-                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-orange-400 rounded-sm"></span> รอบที่ 2</span>
-                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-purple-400 rounded-sm"></span> รอบที่ 3</span>
+                <div class="bg-white p-3 rounded-xl shadow-sm border flex items-center gap-3">
+                    <span class="text-sm font-semibold">รุ่นปีการศึกษา:</span>
+                    <select id="yearFilter" onchange="renderTable()" class="font-bold text-blue-700 outline-none">
+                        <option value="2567">2567</option>
+                        <option value="2568">2568</option>
+                        <option value="2569">2569</option>
+                    </select>
                 </div>
             </div>
-            <div class="chart-container">
-                <canvas id="drillDownChart"></canvas>
-            </div>
-        </div>
 
-        <div id="drillDownSection" class="bg-white rounded-3xl shadow-xl border border-blue-100 overflow-hidden hidden animate-in slide-in-from-bottom duration-500">
-            <div class="bg-blue-50 p-6 border-b border-blue-100 flex justify-between items-center">
-                <h3 class="text-lg font-bold text-blue-900" id="tableTitle">รายชื่อนักศึกษา</h3>
-                <span class="bg-blue-900 text-white px-4 py-1 rounded-full text-xs" id="studentCount">0 คน</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead class="bg-white text-slate-500 text-xs uppercase tracking-wider">
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
                         <tr>
-                            <th class="p-4">ลำดับ</th>
-                            <th class="p-4">รหัสนักศึกษา</th>
-                            <th class="p-4">ชื่อ-นามสกุล</th>
-                            <th class="p-4">สถานะวิชานี้</th>
-                            <th class="p-4">ภาพรวม (ผ่าน/8)</th>
+                            <th class="p-4 font-bold">ลำดับ</th>
+                            <th class="p-4 font-bold">รหัสนักศึกษา</th>
+                            <th class="p-4 font-bold">ชื่อ-นามสกุล</th>
+                            <th class="p-4 font-bold text-center bg-blue-50/50">สอบรอบที่ 1</th>
+                            <th class="p-4 font-bold text-center bg-blue-50/50">สอบรอบที่ 2</th>
+                            <th class="p-4 font-bold text-center bg-blue-50/50">สอบรอบที่ 3</th>
+                            <th class="p-4 font-bold text-center border-l bg-amber-50">สรุปผล</th>
                         </tr>
                     </thead>
-                    <tbody id="drillDownTableBody" class="divide-y divide-slate-100 text-sm">
+                    <tbody id="studentTableBody" class="divide-y divide-slate-100">
                         </tbody>
                 </table>
             </div>
         </div>
+
+        <div id="page-dashboard" class="hidden space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div id="chart-container" class="contents"></div>
+            </div>
+            <div class="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
+                <h3 class="font-bold text-lg mb-6 text-slate-800">วิเคราะห์จำนวนผู้ผ่านแยกตามรายวิชา</h3>
+                <div class="h-[400px]"><canvas id="subjectChart"></canvas></div>
+            </div>
+        </div>
+
     </main>
+
+    <div id="modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h3 class="text-xl font-bold text-slate-800" id="modalTitle">บันทึกผลการสอบ</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-2xl">×</button>
+            </div>
+            <div class="p-8">
+                <div id="modalStudentInfo" class="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm"></div>
+                
+                <div class="flex gap-2 mb-6">
+                    <button onclick="quickAction('all')" class="flex-1 py-2 rounded-xl bg-blue-100 text-blue-700 text-xs font-bold hover:bg-blue-200 transition">ผ่านทุกวิชา</button>
+                    <button onclick="quickAction('none')" class="flex-1 py-2 rounded-xl bg-red-100 text-red-700 text-xs font-bold hover:bg-red-200 transition">ไม่ผ่านทุกวิชา</button>
+                </div>
+
+                <div class="space-y-3 mb-8" id="subjectList">
+                    </div>
+
+                <button onclick="saveData()" class="w-full py-4 bg-blue-900 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-800 transition">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const subjects = ["การผดุงครรภ์", "มารดาและทารก", "เด็กและวัยรุ่น", "ผู้ใหญ่", "ผู้สูงอายุ", "สุขภาพจิต", "อนามัยชุมชน", "กฎหมาย/จรรยาบรรณ"];
         let students = [];
-        let myChart = null;
+        let currentSession = { id: null, round: null };
 
-        // 1. จำลองข้อมูล 150 คน
-        function generateMockData() {
-            students = [];
+        // 1. Generate 150 Students
+        function init() {
             [2567, 2568, 2569].forEach(y => {
                 for(let i=1; i<=50; i++) {
-                    // สุ่มข้อมูลให้ดูสมจริง
-                    const passR1 = Array.from({length: 8}, () => Math.random() > 0.4);
-                    const passR2 = passR1.map(p => p ? false : Math.random() > 0.5);
-                    const passR3 = passR1.map((p, idx) => (p || passR2[idx]) ? false : Math.random() > 0.6);
-
                     students.push({
                         id: `${y}_${i}`,
                         code: `${y-2500}011${String(i).padStart(4,'0')}`,
                         name: `นักศึกษา ${i} รุ่นปี ${y}`,
                         year: y,
-                        r1: passR1.map((p, idx) => p ? idx : null).filter(v => v !== null),
-                        r2: passR2.map((p, idx) => p ? idx : null).filter(v => v !== null),
-                        r3: passR3.map((p, idx) => p ? idx : null).filter(v => v !== null)
+                        r1: [], r2: [], r3: [],
+                        isStarted: false
                     });
                 }
             });
+            renderTable();
         }
 
-        // 2. อัปเดตหน้า Dashboard
-        function updateDashboard() {
-            const selectedYear = parseInt(document.getElementById('dashboardYear').value);
-            const data = students.filter(s => s.year === selectedYear);
+        // 2. Render Table with Logic
+        function renderTable() {
+            const y = parseInt(document.getElementById('yearFilter').value);
+            const body = document.getElementById('studentTableBody');
+            const data = students.filter(s => s.year === y);
 
-            // สถิติ Card
-            const r1Pass = data.filter(s => s.r1.length === 8).length;
-            const overallPass = data.filter(s => new Set([...s.r1, ...s.r2, ...s.r3]).size === 8).length;
-            document.getElementById('stat-r1').innerText = `${r1Pass} คน (${((r1Pass/50)*100).toFixed(0)}%)`;
-            document.getElementById('stat-r23').innerText = `${overallPass - r1Pass} คน`;
-            document.getElementById('stat-total').innerText = `${overallPass} / 50 คน`;
-
-            renderChart(data);
-            document.getElementById('drillDownSection').classList.add('hidden'); // ซ่อนตารางตอนเปลี่ยนปี
-        }
-
-        // 3. สร้างกราฟ Interactive
-        function renderChart(yearData) {
-            const ctx = document.getElementById('drillDownChart').getContext('2d');
-            if (myChart) myChart.destroy();
-
-            const getSubjectCount = (round) => subjects.map((_, idx) => 
-                yearData.filter(s => s[round].includes(idx)).length
-            );
-
-            myChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: subjects,
-                    datasets: [
-                        { label: 'รอบที่ 1', data: getSubjectCount('r1'), backgroundColor: '#3b82f6' },
-                        { label: 'รอบที่ 2', data: getSubjectCount('r2'), backgroundColor: '#fb923c' },
-                        { label: 'รอบที่ 3', data: getSubjectCount('r3'), backgroundColor: '#c084fc' }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, max: 50, grid: { display: false } },
-                        x: { grid: { display: false } }
-                    },
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const { datasetIndex, index } = elements[0];
-                            showDrillDown(yearData, datasetIndex + 1, index);
-                        }
-                    }
-                }
-            });
-        }
-
-        // 4. แสดงตารางรายชื่อเมื่อคลิกกราฟ
-        function showDrillDown(yearData, roundNum, subjectIdx) {
-            const roundKey = 'r' + roundNum;
-            const subjectName = subjects[subjectIdx];
-            const filteredStudents = yearData.filter(s => s[roundKey].includes(subjectIdx));
-
-            // อัปเดต UI หัวตาราง
-            document.getElementById('tableTitle').innerHTML = `นักศึกษาที่สอบผ่านวิชา <span class="text-blue-600">"${subjectName}"</span> ใน <span class="text-blue-600">รอบที่ ${roundNum}</span>`;
-            document.getElementById('studentCount').innerText = `${filteredStudents.length} คน`;
-            
-            const tbody = document.getElementById('drillDownTableBody');
-            tbody.innerHTML = filteredStudents.map((s, idx) => {
-                const totalPassCount = new Set([...s.r1, ...s.r2, ...s.r3]).size;
+            body.innerHTML = data.map((s, idx) => {
+                const totalPassed = new Set([...s.r1, ...s.r2, ...s.r3]).size;
+                const summary = s.isStarted ? (totalPassed === 8 ? '<span class="text-green-600 font-bold italic">ผ่านครบ</span>' : `<span class="font-mono font-bold">${totalPassed}/8</span>`) : '<span class="text-slate-300">ยังไม่สอบ</span>';
+                
                 return `
-                    <tr class="hover:bg-slate-50 transition">
-                        <td class="p-4 text-slate-400">${idx + 1}</td>
-                        <td class="p-4 font-bold text-slate-700">${s.code}</td>
-                        <td class="p-4">${s.name}</td>
-                        <td class="p-4 text-green-600 font-bold italic">✓ ผ่านในรอบที่ ${roundNum}</td>
-                        <td class="p-4">
-                            <div class="w-full bg-slate-100 rounded-full h-2 w-24 overflow-hidden">
-                                <div class="bg-blue-600 h-full" style="width: ${(totalPassCount/8)*100}%"></div>
-                            </div>
-                            <span class="text-xs text-slate-500">${totalPassCount}/8 วิชา</span>
-                        </td>
-                    </tr>
-                `;
+                <tr class="hover:bg-slate-50/80 transition">
+                    <td class="p-4 text-slate-400 text-sm">${idx+1}</td>
+                    <td class="p-4 font-semibold text-slate-700">${s.code}</td>
+                    <td class="p-4 font-medium text-slate-600">${s.name}</td>
+                    ${[1,2,3].map(r => `<td class="p-4 text-center">${getRoundStatusUI(s, r)}</td>`).join('')}
+                    <td class="p-4 text-center border-l bg-amber-50/30">${summary}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function getRoundStatusUI(student, round) {
+            const data = student['r'+round];
+            const roundStarted = student['is_r'+round+'_attempted']; // Track if teacher saved this round
+            
+            if (!roundStarted) return `<button onclick="openModal('${student.id}', ${round})" class="text-xs text-slate-400 hover:text-blue-600 underline underline-offset-4">ยังไม่สอบ</button>`;
+            
+            if (data.length === 8) return `<span class="status-pill bg-green-50 text-green-700 border-green-200" onclick="openModal('${student.id}', ${round})">ผ่าน</span>`;
+            if (data.length > 0) return `<span class="status-pill bg-orange-50 text-orange-700 border-orange-200" onclick="openModal('${student.id}', ${round})">ผ่าน!</span>`;
+            return `<span class="status-pill bg-red-50 text-red-700 border-red-200" onclick="openModal('${student.id}', ${round})">ไม่ผ่าน</span>`;
+        }
+
+        // 3. Modal & Logic for Round 2, 3
+        function openModal(id, round) {
+            currentSession = { id, round };
+            const s = students.find(x => x.id === id);
+            
+            // ค้นหาวิชาที่สอบผ่านไปแล้วในรอบก่อนหน้า
+            const previouslyPassed = new Set();
+            if(round > 1) s.r1.forEach(v => previouslyPassed.add(v));
+            if(round > 2) s.r2.forEach(v => previouslyPassed.add(v));
+
+            document.getElementById('modalStudentInfo').innerHTML = `<b>${s.name}</b> (${s.code})<br><span class="text-blue-600">กำลังบันทึก: รอบที่ ${round}</span>`;
+            
+            const list = document.getElementById('subjectList');
+            list.innerHTML = subjects.map((sub, i) => {
+                const isAlreadyPass = previouslyPassed.has(i);
+                return `
+                <label class="flex items-center justify-between p-3 rounded-xl border ${isAlreadyPass ? 'bg-slate-100 opacity-50 cursor-not-allowed' : 'hover:bg-blue-50 cursor-pointer'}">
+                    <span class="text-sm font-medium ${isAlreadyPass ? 'text-slate-400' : 'text-slate-700'}">${sub} ${isAlreadyPass ? '(ผ่านแล้ว)' : ''}</span>
+                    <input type="checkbox" value="${i}" class="sub-cb w-5 h-5 rounded-md" 
+                    ${isAlreadyPass ? 'disabled checked' : (s['r'+round].includes(i) ? 'checked' : '')}>
+                </label>`;
             }).join('');
 
-            document.getElementById('drillDownSection').classList.remove('hidden');
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            document.getElementById('modal').classList.remove('hidden');
         }
 
-        // เริ่มต้นระบบ
-        generateMockData();
-        updateDashboard();
+        function quickAction(type) {
+            document.querySelectorAll('.sub-cb:not(:disabled)').forEach(cb => cb.checked = (type === 'all'));
+        }
+
+        function saveData() {
+            const s = students.find(x => x.id === currentSession.id);
+            const checked = [];
+            document.querySelectorAll('.sub-cb').forEach(cb => {
+                // เก็บเฉพาะวิชาที่ "เพิ่งติ๊กผ่านในรอบนี้" (ไม่รวมของเก่าที่ disabled)
+                if(cb.checked && !cb.disabled) checked.push(parseInt(cb.value));
+            });
+
+            s['r' + currentSession.round] = checked;
+            s.isStarted = true;
+            s['is_r'+currentSession.round+'_attempted'] = true;
+            
+            closeModal();
+            renderTable();
+        }
+
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+        function switchPage(p) {
+            document.getElementById('page-record').classList.toggle('hidden', p !== 'record');
+            document.getElementById('page-dashboard').classList.toggle('hidden', p !== 'dashboard');
+            document.getElementById('nav-record').className = p === 'record' ? 'py-5 active-nav' : 'py-5 text-gray-400';
+            document.getElementById('nav-dashboard').className = p === 'dashboard' ? 'py-5 active-nav' : 'py-5 text-gray-400';
+            if(p === 'dashboard') initDashboard();
+        }
+
+        // 4. Dashboard Charts
+        let charts = [];
+        function initDashboard() {
+            charts.forEach(c => c.destroy()); charts = [];
+            const container = document.getElementById('chart-container');
+            container.innerHTML = '';
+
+            [2567, 2568, 2569].forEach(y => {
+                const data = students.filter(s => s.year === y);
+                const pass = data.filter(s => new Set([...s.r1, ...s.r2, ...s.r3]).size === 8).length;
+                
+                const div = document.createElement('div');
+                div.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-100 text-center";
+                div.innerHTML = `<h4 class="font-bold text-slate-500 mb-4">ผลการสอบปี ${y}</h4><canvas id="c${y}"></canvas><p class="mt-4 text-2xl font-bold text-blue-900">${((pass/50)*100).toFixed(0)}% ผ่านครบ</p>`;
+                container.appendChild(div);
+
+                charts.push(new Chart(document.getElementById('c'+y), {
+                    type: 'doughnut',
+                    data: { labels: ['ผ่านครบ', 'ยังไม่ครบ'], datasets: [{ data: [pass, 50-pass], backgroundColor: ['#1e3a8a', '#f1f5f9'] }] },
+                    options: { cutout: '80%', plugins: { legend: { display: false } } }
+                }));
+            });
+
+            // Subject Bar Chart
+            const subData = subjects.map((_, i) => students.filter(s => s.r1.includes(i) || s.r2.includes(i) || s.r3.includes(i)).length);
+            charts.push(new Chart(document.getElementById('subjectChart'), {
+                type: 'bar',
+                data: { labels: subjects, datasets: [{ label: 'จำนวนผู้สอบผ่าน (คน)', data: subData, backgroundColor: '#3b82f6', borderRadius: 10 }] },
+                options: { maintainAspectRatio: false }
+            }));
+        }
+
+        function switchPage(p) {
+            document.getElementById('page-record').classList.toggle('hidden', p !== 'record');
+            document.getElementById('page-dashboard').classList.toggle('hidden', p !== 'dashboard');
+            document.getElementById('nav-record').className = p === 'record' ? 'py-5 active-nav px-2' : 'py-5 text-gray-400 px-2';
+            document.getElementById('nav-dashboard').className = p === 'dashboard' ? 'py-5 active-nav px-2' : 'py-5 text-gray-400 px-2';
+            if(p === 'dashboard') initDashboard();
+        }
+
+        init();
     </script>
 </body>
 </html>
