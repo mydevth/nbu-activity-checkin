@@ -43,6 +43,7 @@ app.use('/mobile',  express.static(path.join(__dirname, 'src/mobile'),  staticOp
 app.use('/stats',   express.static(path.join(__dirname, 'src/stats'),   staticOpts));
 app.use('/liff',    express.static(path.join(__dirname, 'src/liff'),    staticOpts));
 app.use('/report',  express.static(path.join(__dirname, 'src/report'),  staticOpts));
+app.use('/mockup',  express.static(path.join(__dirname, 'mockup'),      staticOpts));
 
 // ─── API Routes ────────────────────────────────────────────────────────────
 app.use('/api/v1/auth',       authRoutes);
