@@ -262,9 +262,10 @@
         บรรทัดแรกต้องเป็น header — รองรับ <code>UTF-8</code> และ <code>UTF-8 BOM</code> (Export จาก Excel ได้เลย)<br><br>
         <strong>คอลัมน์ที่รองรับ:</strong><br>
         <code>student_id</code>, <code>full_name</code>, <code>faculty</code>, <code>major</code>,
-        <code>level</code>, <code>study_duration</code>, <code>study_period</code>, <code>study_plan</code>, <code>loan_status</code><br><br>
+        <code>level</code>, <code>study_duration</code>, <code>study_period</code>, <code>study_plan</code>, <code>loan_status</code>, <code>student_status</code><br><br>
+        <small style="color:#92400e"><i class="fa-solid fa-circle-info"></i> <code>student_status</code> = รหัสสถานะนักศึกษา เช่น <strong>10</strong>=ปกติ, <strong>11</strong>=พักการเรียน, <strong>12</strong>=ลาออก</small><br><br>
         ตัวอย่างแถวข้อมูล:<br>
-        <code>671280108,นายสมชาย ใจดี,คณะวิทยาศาสตร์และเทคโนโลยี,วิทยาการคอมพิวเตอร์,ปริญญาตรี,4 ปี,ภาคปกติ,แผน ก,กู้ยืม</code><br><br>
+        <code>671280108,นายสมชาย ใจดี,คณะวิทยาศาสตร์และเทคโนโลยี,วิทยาการคอมพิวเตอร์,ปริญญาตรี,4 ปี,ภาคปกติ,แผน ก,กู้ยืม,10</code><br><br>
         <a id="btn-download-sample" href="#" style="color:#92400e;font-weight:600">
           <i class="fa-solid fa-download"></i> ดาวน์โหลดไฟล์ตัวอย่าง (sample.csv)
         </a>
@@ -406,12 +407,12 @@ let token      = localStorage.getItem('admin_token');
 document.getElementById('btn-download-sample').addEventListener('click', (e) => {
     e.preventDefault();
     const rows = [
-        'student_id,full_name,faculty,major,level,study_duration,study_period,study_plan,loan_status',
-        '671280101,นายสมชาย ใจดี,คณะวิทยาศาสตร์และเทคโนโลยี,วิทยาการคอมพิวเตอร์,ปริญญาตรี,4 ปี,ภาคปกติ,แผน ก,กู้ยืม',
-        '671280102,นางสาวสมหญิง รักเรียน,คณะบริหารธุรกิจ,การจัดการ,ปริญญาตรี,4 ปี,ภาคปกติ,แผน ก,ไม่กู้ยืม',
-        '671280103,นายสมศักดิ์ มั่นคง,คณะวิศวกรรมศาสตร์,วิศวกรรมคอมพิวเตอร์,ปริญญาตรี,4 ปี,ภาคพิเศษ,แผน ข,กู้ยืม',
-        '671280104,นางสาวสมใจ ดีงาม,คณะนิติศาสตร์,นิติศาสตร์,ปริญญาตรี,4 ปี,ภาคปกติ,แผน ก,ไม่กู้ยืม',
-        '671280105,นายสมบูรณ์ เจริญ,คณะรัฐศาสตร์,รัฐประศาสนศาสตร์,ปริญญาตรี,4 ปี,เสาร์-อาทิตย์,แผน ข,กู้ยืม',
+        'student_id,full_name,faculty,major,level,study_duration,study_period,study_plan,loan_status,student_status',
+        '671280101,นายสมชาย ใจดี,คณะวิทยาศาสตร์และเทคโนโลยี,วิทยาการคอมพิวเตอร์,ปริญญาตรี,4 ปี,ภาคปกติ,แผน ก,กู้ยืม,10',
+        '671280102,นางสาวสมหญิง รักเรียน,คณะบริหารธุรกิจ,การจัดการ,ปริญญาตรี,4 ปี,ภาคปกติ,แผน ก,ไม่กู้ยืม,10',
+        '671280103,นายสมศักดิ์ มั่นคง,คณะวิศวกรรมศาสตร์,วิศวกรรมคอมพิวเตอร์,ปริญญาตรี,4 ปี,ภาคพิเศษ,แผน ข,กู้ยืม,10',
+        '671280104,นางสาวสมใจ ดีงาม,คณะนิติศาสตร์,นิติศาสตร์,ปริญญาตรี,4 ปี,ภาคปกติ,แผน ก,ไม่กู้ยืม,11',
+        '671280105,นายสมบูรณ์ เจริญ,คณะรัฐศาสตร์,รัฐประศาสนศาสตร์,ปริญญาตรี,4 ปี,เสาร์-อาทิตย์,แผน ข,กู้ยืม,12',
     ];
     const bom  = '\uFEFF'; // UTF-8 BOM สำหรับ Excel
     const blob = new Blob([bom + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });

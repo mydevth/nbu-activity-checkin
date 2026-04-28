@@ -17,7 +17,9 @@ router.get('/', async (req, res) => {
                 SELECT a.*, v.total_attended, v.created_by_name,
                        COALESCE(json_agg(
                            json_build_object('user_id', u.id, 'full_name', u.full_name, 'role', u.role)
-                       ) FILTER (WHERE u.id IS NOT NULL), '[]') AS staff
+                       ) FILTER (WHERE u.id IS NOT NULL), '[]') AS staff,
+                       (SELECT COUNT(*) FROM nbu_activity_target_students ts WHERE ts.activity_id = a.id) AS explicit_target_count,
+                       (SELECT COUNT(*) FROM nbu_activity_targets t WHERE t.activity_id = a.id) AS rule_target_count
                 FROM nbu_activities a
                 JOIN nbu_v_activity_summary v ON v.id = a.id
                 LEFT JOIN nbu_activity_staff as2 ON as2.activity_id = a.id
@@ -27,7 +29,9 @@ router.get('/', async (req, res) => {
             params = [];
         } else {
             sql = `
-                SELECT a.*, v.total_attended, v.created_by_name, '[]'::json AS staff
+                SELECT a.*, v.total_attended, v.created_by_name, '[]'::json AS staff,
+                       (SELECT COUNT(*) FROM nbu_activity_target_students ts WHERE ts.activity_id = a.id) AS explicit_target_count,
+                       (SELECT COUNT(*) FROM nbu_activity_targets t WHERE t.activity_id = a.id) AS rule_target_count
                 FROM nbu_activities a
                 JOIN nbu_v_activity_summary v ON v.id = a.id
                 JOIN nbu_activity_staff as2 ON as2.activity_id = a.id AND as2.user_id = $1
