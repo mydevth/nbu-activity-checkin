@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "studentCode": "670110001",
+    "fullName": "นางสาวนอร์ท รักดี",
+    "gradYear": 2567,
+    "results": {
+      "round1": [true, true, false, true, true, false, false, true],
+      "round2": [],
+      "round3": []
+    }
+  },
+  {
+    "id": 51,
+    "studentCode": "680110051",
+    "fullName": "นายขยัน เรียนดี",
+    "gradYear": 2568,
+    "results": {
+      "round1": [true, true, true, true, true, true, true, true],
+      "round2": [],
+      "round3": []
+    }
+  }
+  // ... ข้อมูลจะถูก generate ต่อให้ครบ 150 คนใน code HTML ด้านล่าง
+]

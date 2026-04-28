@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBU Nursing Exam Tracking System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f0f2f5; }
+        .active-nav { border-bottom: 3px solid #1e3a8a; color: #1e3a8a; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <nav class="bg-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-2">
+                    <div class="w-10 h-10 bg-blue-900 rounded-full flex items-center justify-center text-white font-bold">NBU</div>
+                    <span class="text-lg font-bold text-blue-900 hidden md:block">คณะพยาบาลศาสตร์ ม.นอร์ทกรุงเทพ</span>
+                </div>
+                <div class="flex space-x-8">
+                    <button onclick="switchPage('record')" id="nav-record" class="py-5 px-1 active-nav hover:text-blue-700 transition">บันทึกผลการสอบ</button>
+                    <button onclick="switchPage('dashboard')" id="nav-dashboard" class="py-5 px-1 text-gray-500 hover:text-blue-700 transition">Dashboard สถิติ</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-8">
+
+        <div id="page-record">
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                <h2 class="text-2xl font-bold text-gray-800">จัดการข้อมูลและบันทึกผลการสอบ</h2>
+                <div class="flex items-center space-x-3 bg-white p-2 rounded-lg shadow-sm border">
+                    <label class="text-sm font-semibold text-gray-600">ปีที่จบการศึกษา:</label>
+                    <select id="yearFilter" onchange="renderStudentTable()" class="outline-none bg-transparent font-bold text-blue-800 cursor-pointer">
+                        <option value="2567">2567</option>
+                        <option value="2568">2568</option>
+                        <option value="2569">2569</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-blue-900 text-white text-sm">
+                            <tr>
+                                <th class="p-4">ลำดับ</th>
+                                <th class="p-4">รหัสนักศึกษา</th>
+                                <th class="p-4">ชื่อ-นามสกุล</th>
+                                <th class="p-4 text-center">สอบรอบที่ 1</th>
+                                <th class="p-4 text-center">สอบรอบที่ 2</th>
+                                <th class="p-4 text-center">สอบรอบที่ 3</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody" class="text-gray-700 divide-y">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-dashboard" class="hidden space-y-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Dashboard วิเคราะห์ผลการสอบสภาฯ</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 text-center">
+                    <h3 class="font-bold text-gray-700 mb-4">สถิติปีการศึกษา 2567</h3>
+                    <div class="h-48 flex justify-center"><canvas id="chart2567"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 text-center">
+                    <h3 class="font-bold text-gray-700 mb-4">สถิติปีการศึกษา 2568</h3>
+                    <div class="h-48 flex justify-center"><canvas id="chart2568"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 text-center">
+                    <h3 class="font-bold text-gray-700 mb-4">สถิติปีการศึกษา 2569</h3>
+                    <div class="h-48 flex justify-center"><canvas id="chart2569"></canvas></div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                <h3 class="font-bold text-gray-700 mb-6 flex items-center">
+                    <span class="w-2 h-6 bg-blue-900 mr-2 rounded"></span> 
+                    จำนวนนักศึกษาที่สอบผ่านแยกตามรายวิชา (รวมทุกรอบ)
+                </h3>
+                <div class="h-80"><canvas id="subjectChart"></canvas></div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div class="bg-blue-900 p-4 text-white flex justify-between items-center">
+                <h3 class="font-bold" id="modalTitle">บันทึกผลการสอบ</h3>
+                <button onclick="closeModal()" class="text-white hover:rotate-90 transition-transform">✕</button>
+            </div>
+            <div class="p-6">
+                <div id="modalInfo" class="mb-4 pb-4 border-b border-gray-100 text-sm text-gray-600"></div>
+                <label class="flex items-center space-x-3 mb-4 p-3 bg-blue-50 rounded-lg cursor-pointer">
+                    <input type="checkbox" id="selectAll" class="w-5 h-5 rounded accent-blue-900">
+                    <span class="font-bold text-blue-900">เลือกวิชาที่สอบผ่านทั้งหมด</span>
+                </label>
+                <div id="subjectGrid" class="grid grid-cols-1 gap-2 mb-6">
+                    </div>
+                <div class="flex space-x-3">
+                    <button onclick="closeModal()" class="flex-1 py-2 border rounded-lg hover:bg-gray-50 transition">ยกเลิก</button>
+                    <button onclick="saveExamData()" class="flex-1 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition">บันทึกข้อมูล</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const subjects = [
+            "การผดุงครรภ์", "การพยาบาลมารดาและทารก", "การพยาบาลเด็กและวัยรุ่น", "การพยาบาลผู้ใหญ่",
+            "การพยาบาลผู้สูงอายุ", "การพยาบาลสุขภาพจิตและจิตเวช", "พยาบาลอนามัยชุมชน/รักษาขั้นต้น", "กฎหมายและจรรยาบรรณวิชาชีพ"
+        ];
+
+        let students = [];
+        let currentEdit = { studentId: null, round: null };
+
+        // 1. Initialize Mock Data (150 students)
+        function initData() {
+            for (let y of [2567, 2568, 2569]) {
+                for (let i = 1; i <= 50; i++) {
+                    students.push({
+                        id: y + "_" + i,
+                        studentCode: (y - 2500) + "011" + String(i).padStart(4, '0'),
+                        fullName: `นักศึกษาปี ${y} ลำดับที่ ${i}`,
+                        gradYear: y,
+                        results: { round1: [], round2: [], round3: [] }
+                    });
+                }
+            }
+        }
+
+        // 2. Navigation Logic
+        function switchPage(page) {
+            document.getElementById('page-record').classList.toggle('hidden', page !== 'record');
+            document.getElementById('page-dashboard').classList.toggle('hidden', page !== 'dashboard');
+            document.getElementById('nav-record').className = page === 'record' ? 'py-5 px-1 active-nav' : 'py-5 px-1 text-gray-500';
+            document.getElementById('nav-dashboard').className = page === 'dashboard' ? 'py-5 px-1 active-nav' : 'py-5 px-1 text-gray-500';
+            if (page === 'dashboard') renderCharts();
+        }
+
+        // 3. Table Rendering
+        function renderStudentTable() {
+            const year = parseInt(document.getElementById('yearFilter').value);
+            const tbody = document.getElementById('studentTableBody');
+            const filtered = students.filter(s => s.gradYear === year);
+            
+            tbody.innerHTML = filtered.map((s, idx) => `
+                <tr class="hover:bg-blue-50/50 transition">
+                    <td class="p-4 text-sm text-gray-400">${idx + 1}</td>
+                    <td class="p-4 font-semibold text-blue-900">${s.studentCode}</td>
+                    <td class="p-4">${s.fullName}</td>
+                    ${[1, 2, 3].map(r => `
+                        <td class="p-4 text-center">
+                            <button onclick="openModal('${s.id}', ${r})" class="text-xs px-3 py-1.5 rounded-full border transition font-bold
+                                ${s.results['round' + r].length === 8 ? 'bg-green-100 text-green-700 border-green-200' : 
+                                  s.results['round' + r].length > 0 ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-gray-100 text-gray-500 border-gray-200'}">
+                                ${s.results['round' + r].length === 8 ? 'ผ่าน' : 
+                                  s.results['round' + r].length > 0 ? `ไม่ผ่าน (${s.results['round' + r].length}/8)` : 'ยังไม่สอบ'}
+                            </button>
+                        </td>
+                    `).join('')}
+                </tr>
+            `).join('');
+        }
+
+        // 4. Modal Logic
+        function openModal(id, round) {
+            currentEdit = { id, round };
+            const s = students.find(item => item.id === id);
+            document.getElementById('modalInfo').innerHTML = `รหัสนักศึกษา: <b>${s.studentCode}</b><br>ชื่อ: <b>${s.fullName}</b> | รอบที่: <b>${round}</b>`;
+            
+            const grid = document.getElementById('subjectGrid');
+            grid.innerHTML = subjects.map((sub, i) => `
+                <label class="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100">
+                    <input type="checkbox" value="${i}" class="sub-cb w-4 h-4 accent-blue-600" 
+                    ${s.results['round'+round].includes(i) ? 'checked' : ''}>
+                    <span class="text-sm text-gray-700">${sub}</span>
+                </label>
+            `).join('');
+
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('selectAll').checked = s.results['round'+round].length === 8;
+        }
+
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+        document.getElementById('selectAll').onclick = (e) => {
+            document.querySelectorAll('.sub-cb').forEach(cb => cb.checked = e.target.checked);
+        };
+
+        function saveExamData() {
+            const s = students.find(item => item.id === currentEdit.id);
+            const selected = [];
+            document.querySelectorAll('.sub-cb').forEach(cb => { if(cb.checked) selected.push(parseInt(cb.value)); });
+            s.results['round' + currentEdit.round] = selected;
+            closeModal();
+            renderStudentTable();
+        }
+
+        // 5. Dashboard Charts
+        let chartInstances = [];
+        function renderCharts() {
+            chartInstances.forEach(c => c.destroy());
+            chartInstances = [];
+
+            [2567, 2568, 2569].forEach(y => {
+                const yearData = students.filter(s => s.gradYear === y);
+                const passCount = yearData.filter(s => s.results.round1.length === 8 || s.results.round2.length === 8 || s.results.round3.length === 8).length;
+                
+                const ctx = document.getElementById('chart' + y).getContext('2d');
+                chartInstances.push(new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['ผ่าน', 'ไม่ผ่าน'],
+                        datasets: [{
+                            data: [passCount, yearData.length - passCount],
+                            backgroundColor: ['#1e3a8a', '#e5e7eb'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+                }));
+            });
+
+            // Subject Bar Chart Logic
+            const subjectStats = subjects.map((_, i) => {
+                return students.filter(s => s.results.round1.includes(i) || s.results.round2.includes(i) || s.results.round3.includes(i)).length;
+            });
+
+            const ctxBar = document.getElementById('subjectChart').getContext('2d');
+            chartInstances.push(new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: subjects.map(s => s.length > 15 ? s.substring(0,15)+'...' : s),
+                    datasets: [{
+                        label: 'จำนวนคนผ่าน',
+                        data: subjectStats,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 8
+                    }]
+                },
+                options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 150 } } }
+            }));
+        }
+
+        // Init
+        initData();
+        renderStudentTable();
+    </script>
+</body>
+</html>
