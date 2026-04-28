@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบผลการสอบสภาการพยาบาล - มหาวิทยาลัยนอร์ทกรุงเทพ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-900">ระบบบันทึกผลการสอบวัดความรู้สภาการพยาบาล</h1>
+            <p class="text-xl text-blue-700">คณะพยาบาลศาสตร์ มหาวิทยาลัยนอร์ทกรุงเทพ</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                <p class="text-sm text-gray-500 uppercase">สอบผ่านรอบที่ 1</p>
+                <h3 class="text-2xl font-bold" id="stat-r1">0%</h3>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                <p class="text-sm text-gray-500 uppercase">สอบผ่านรอบที่ 2</p>
+                <h3 class="text-2xl font-bold" id="stat-r2">0%</h3>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
+                <p class="text-sm text-gray-500 uppercase">สอบผ่านรอบที่ 3</p>
+                <h3 class="text-2xl font-bold" id="stat-r3">0%</h3>
+            </div>
+            <div class="bg-blue-900 p-6 rounded-xl shadow-sm text-white">
+                <p class="text-sm opacity-80 uppercase">รวมผู้สอบผ่านทั้งหมด</p>
+                <h3 class="text-2xl font-bold" id="stat-total">0 / 150 คน</h3>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap items-center gap-4">
+            <label class="font-semibold">ปีที่จบการศึกษา:</label>
+            <select id="yearFilter" class="border rounded px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                </select>
+            <div class="text-gray-400 text-sm italic">* คลิกที่สถานะ "ยังไม่สอบ" หรือ "ไม่ผ่าน" เพื่อบันทึกผล</div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="p-4 font-semibold">ลำดับ</th>
+                            <th class="p-4 font-semibold">รหัสนักศึกษา</th>
+                            <th class="p-4 font-semibold">ชื่อ-นามสกุล</th>
+                            <th class="p-4 font-semibold text-center">สอบรอบที่ 1</th>
+                            <th class="p-4 font-semibold text-center">สอบรอบที่ 2</th>
+                            <th class="p-4 font-semibold text-center">สอบรอบที่ 3</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="examModal" class="modal flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 m-4">
+            <h3 class="text-xl font-bold mb-2 text-blue-900">บันทึกผลการสอบ</h3>
+            <p id="modalStudentName" class="text-gray-600 mb-4"></p>
+            
+            <div class="mb-4">
+                <label class="flex items-center p-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 mb-3">
+                    <input type="checkbox" id="selectAll" class="w-4 h-4 mr-2">
+                    <span class="font-bold">เลือกทั้งหมด (ผ่านทุกวิชา)</span>
+                </label>
+                <hr class="mb-3">
+                <div id="subjectList" class="space-y-2">
+                    </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-6">
+                <button onclick="closeModal()" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-50">ยกเลิก</button>
+                <button onclick="saveResult()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ข้อมูลวิชา
+        const subjects = [
+            "การผดุงครรภ์", "การพยาบาลมารดาและทารก", "การพยาบาลเด็กและวัยรุ่น", "การพยาบาลผู้ใหญ่",
+            "การพยาบาลผู้สูงอายุ", "การพยาบาลสุขภาพจิตและจิตเวช", "การพยาบาลอนามัยชุมชนฯ", "กฎหมายและจรรยาบรรณวิชาชีพ"
+        ];
+
+        // สร้างข้อมูล Mock Data 150 คน
+        let students = [];
+        const years = Array.from({length: 40}, (_, i) => 2567 - i);
+        
+        for (let i = 1; i <= 150; i++) {
+            students.push({
+                id: i,
+                studentCode: `63011${String(i).padStart(4, '0')}`,
+                name: `นักศึกษา ${i} นามสกุลสมมติ`,
+                gradYear: 2566,
+                rounds: { 1: [], 2: [], 3: [] } // เก็บวิชาที่ผ่านในแต่ละรอบ
+            });
+        }
+
+        // ตัวแปรเก็บสถานะการแก้ไข
+        let currentEdit = { studentId: null, round: null };
+
+        // เริ่มต้นหน้าเว็บ
+        window.onload = () => {
+            const yearSelect = document.getElementById('yearFilter');
+            years.forEach(y => yearSelect.innerHTML += `<option value="${y}">${y}</option>`);
+            
+            const subjectDiv = document.getElementById('subjectList');
+            subjects.forEach((s, idx) => {
+                subjectDiv.innerHTML += `
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" class="sub-check w-4 h-4 mr-2" value="${idx}"> ${s}
+                    </label>
+                `;
+            });
+
+            renderTable();
+            updateStats();
+
+            // Logic เลือกทั้งหมด
+            document.getElementById('selectAll').addEventListener('change', function(e) {
+                document.querySelectorAll('.sub-check').forEach(cb => cb.checked = e.target.checked);
+            });
+        };
+
+        function renderTable() {
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = '';
+            
+            students.forEach((s, index) => {
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-4 text-sm text-gray-500">${index + 1}</td>
+                        <td class="p-4 font-medium">${s.studentCode}</td>
+                        <td class="p-4">${s.name}</td>
+                        ${[1, 2, 3].map(r => `
+                            <td class="p-4 text-center cursor-pointer" onclick="openModal(${s.id}, ${r})">
+                                ${getStatusHTML(s.rounds[r])}
+                            </td>
+                        `).join('')}
+                    </tr>
+                `;
+            });
+        }
+
+        function getStatusHTML(passedArray) {
+            if (passedArray.length === 0) return `<span class="text-gray-400">ยังไม่สอบ</span>`;
+            if (passedArray.length === 8) return `<span class="text-green-600 font-bold">ผ่าน</span>`;
+            return `<span class="text-red-500 font-medium text-sm">ไม่ผ่าน (${passedArray.length}/8)</span>`;
+        }
+
+        function openModal(id, round) {
+            currentEdit = { studentId: id, round: round };
+            const student = students.find(s => s.id === id);
+            document.getElementById('modalStudentName').innerText = `${student.name} (รอบที่ ${round})`;
+            
+            // Reset checkboxes
+            const checkedSubjects = student.rounds[round];
+            document.querySelectorAll('.sub-check').forEach(cb => {
+                cb.checked = checkedSubjects.includes(parseInt(cb.value));
+            });
+            document.getElementById('selectAll').checked = checkedSubjects.length === 8;
+            
+            document.getElementById('examModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('examModal').style.display = 'none';
+        }
+
+        function saveResult() {
+            const student = students.find(s => s.id === currentEdit.studentId);
+            const passed = [];
+            document.querySelectorAll('.sub-check').forEach(cb => {
+                if(cb.checked) passed.push(parseInt(cb.value));
+            });
+            
+            student.rounds[currentEdit.round] = passed;
+            closeModal();
+            renderTable();
+            updateStats();
+        }
+
+        function updateStats() {
+            const total = students.length;
+            let p1 = 0, p2 = 0, p3 = 0, totalPass = 0;
+
+            students.forEach(s => {
+                let passedAny = false;
+                if (s.rounds[1].length === 8) { p1++; passedAny = true; }
+                if (s.rounds[2].length === 8) { p2++; passedAny = true; }
+                if (s.rounds[3].length === 8) { p3++; passedAny = true; }
+                if (passedAny) totalPass++;
+            });
+
+            document.getElementById('stat-r1').innerText = ((p1/total)*100).toFixed(1) + '%';
+            document.getElementById('stat-r2').innerText = ((p2/total)*100).toFixed(1) + '%';
+            document.getElementById('stat-r3').innerText = ((p3/total)*100).toFixed(1) + '%';
+            document.getElementById('stat-total').innerText = `${totalPass} / ${total} คน`;
+        }
+    </script>
+</body>
+</html>
